@@ -1,0 +1,1700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Travel Guru — Admin Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root{
+      --saffron:#FF6B00;--saffron-dk:#C45200;--navy:#0D2137;--navy-mid:#163352;
+      --forest:#1A6B3C;--cream:#FFF8F0;--white:#fff;
+      --txt:#1A1A2E;--txt-mid:#4A4A6A;--txt-lt:#888;
+      --border:rgba(0,0,0,.1);--radius:14px;--shadow:0 4px 24px rgba(13,33,55,.1);
+      --danger:#e53e3e;--success:#38a169;--warn:#d69e2e;--info:#3182ce;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'DM Sans',sans-serif;background:#f4f6f9;color:var(--txt)}
+    button,input,select,textarea{font-family:inherit}
+    ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--saffron);border-radius:4px}
+
+    /* LOGIN */
+    #loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;
+      background:linear-gradient(135deg,#0D2137,#163352,#0F4526)}
+    .login-card{background:white;border-radius:24px;padding:48px 40px;max-width:460px;width:100%;
+      box-shadow:0 32px 80px rgba(0,0,0,.35);text-align:center}
+    .login-brand{font-family:'Playfair Display',serif;font-size:2.2rem;color:var(--navy);margin-bottom:4px}
+    .login-brand span{color:var(--saffron);font-style:italic}
+    .login-sub{color:var(--txt-lt);font-size:.85rem;margin-bottom:8px;letter-spacing:.5px;text-transform:uppercase}
+    .login-creds{background:#f8f9fa;border:1px solid #e9ecef;border-radius:10px;padding:12px;margin-bottom:24px;text-align:left}
+    .login-creds p{font-size:.78rem;color:var(--txt-mid);margin-bottom:4px}
+    .login-creds code{font-size:.82rem;color:var(--saffron);font-weight:700;background:#fff3e0;padding:2px 6px;border-radius:4px}
+    .login-label{display:block;text-align:left;font-size:.75rem;font-weight:700;color:var(--txt-mid);
+      text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+    .login-input{width:100%;padding:14px 18px;border:1.5px solid var(--border);border-radius:12px;
+      font-size:.95rem;margin-bottom:16px;outline:none;transition:border .2s}
+    .login-input:focus{border-color:var(--saffron)}
+    .login-btn{width:100%;background:var(--saffron);color:white;border:none;border-radius:12px;
+      padding:15px;font-size:1rem;font-weight:700;cursor:pointer;transition:all .2s;margin-top:4px}
+    .login-btn:hover{background:var(--saffron-dk);transform:translateY(-1px)}
+    .login-err{color:var(--danger);font-size:.85rem;margin-top:12px;display:none;padding:10px;
+      background:#fff5f5;border-radius:8px;border:1px solid #fed7d7}
+
+    /* LAYOUT */
+    #adminApp{display:none}
+    .layout{display:flex;min-height:100vh}
+
+    /* SIDEBAR */
+    .sidebar{width:240px;min-height:100vh;background:var(--navy);color:white;
+      display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;overflow-y:auto}
+    .sidebar-brand{padding:24px 20px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
+    .sidebar-brand h2{font-family:'Playfair Display',serif;font-size:1.25rem;font-weight:700}
+    .sidebar-brand h2 span{color:var(--saffron);font-style:italic}
+    .sidebar-brand p{font-size:.67rem;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1px;margin-top:3px}
+    .nav{padding:10px 0;flex:1}
+    .nav-group{padding:8px 20px 4px;font-size:.62rem;font-weight:700;color:rgba(255,255,255,.25);
+      text-transform:uppercase;letter-spacing:1.5px;margin-top:6px}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;
+      color:rgba(255,255,255,.6);font-size:.85rem;font-weight:500;
+      transition:all .2s;border-left:3px solid transparent}
+    .nav-item:hover{color:white;background:rgba(255,255,255,.05)}
+    .nav-item.active{color:white;background:rgba(255,107,0,.15);border-left-color:var(--saffron)}
+    .nav-icon{font-size:.95rem;width:18px;text-align:center}
+    .sidebar-foot{padding:16px 20px;border-top:1px solid rgba(255,255,255,.08)}
+    .logout-btn{width:100%;background:rgba(255,255,255,.07);border:none;color:rgba(255,255,255,.65);
+      border-radius:10px;padding:9px;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .2s}
+    .logout-btn:hover{background:rgba(229,62,62,.2);color:#fc8181}
+
+    /* MAIN */
+    .main{margin-left:240px;flex:1}
+    .topbar{background:white;padding:14px 28px;display:flex;align-items:center;
+      justify-content:space-between;border-bottom:1px solid var(--border);
+      position:sticky;top:0;z-index:50}
+    .topbar h1{font-family:'Playfair Display',serif;font-size:1.25rem;color:var(--navy)}
+    .topbar-right{display:flex;align-items:center;gap:10px}
+    .admin-badge{background:var(--saffron);color:white;font-size:.7rem;font-weight:700;
+      padding:4px 12px;border-radius:50px}
+    .admin-id-badge{font-size:.75rem;color:var(--txt-lt);background:#f8f9fa;
+      padding:4px 10px;border-radius:50px;border:1px solid #e9ecef}
+
+    /* PAGES */
+    .page{display:none;padding:24px}
+    .page.active{display:block}
+
+    /* STAT CARDS */
+    .stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:24px}
+    .stat-card{background:white;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);
+      border-left:4px solid var(--saffron);cursor:pointer;transition:transform .15s}
+    .stat-card:hover{transform:translateY(-2px)}
+    .stat-card.red{border-left-color:var(--danger)}
+    .stat-card.green{border-left-color:var(--success)}
+    .stat-card.blue{border-left-color:var(--navy)}
+    .stat-card.purple{border-left-color:#7c3aed}
+    .stat-card.teal{border-left-color:#0694a2}
+    .stat-num{font-size:1.9rem;font-weight:800;color:var(--navy);line-height:1}
+    .stat-lbl{font-size:.72rem;color:var(--txt-lt);margin-top:5px;text-transform:uppercase;letter-spacing:1px}
+
+    /* SECTION HEADER */
+    .sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+    .sec-hdr h2{font-family:'Playfair Display',serif;font-size:1.35rem;color:var(--navy)}
+
+    /* BUTTONS */
+    .btn{border:none;border-radius:10px;padding:9px 16px;font-size:.83rem;font-weight:700;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:5px}
+    .btn-primary{background:var(--saffron);color:white}.btn-primary:hover{background:var(--saffron-dk)}
+    .btn-sm{padding:5px 11px;font-size:.76rem;border-radius:7px}
+    .btn-danger{background:var(--danger);color:white}.btn-danger:hover{filter:brightness(.9)}
+    .btn-success{background:var(--success);color:white}.btn-success:hover{filter:brightness(.9)}
+    .btn-outline{background:white;color:var(--saffron);border:1.5px solid var(--saffron)}.btn-outline:hover{background:var(--saffron);color:white}
+    .btn-info{background:var(--info);color:white}.btn-info:hover{filter:brightness(.9)}
+
+    /* FILTERS */
+    .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+    .fi{padding:7px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:.83rem;outline:none;transition:border .2s;min-width:140px}
+    .fi:focus{border-color:var(--saffron)}
+
+    /* TABLE */
+    .tbl-wrap{background:white;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+    table{width:100%;border-collapse:collapse}
+    thead{background:var(--navy)}
+    th{padding:11px 13px;text-align:left;color:rgba(255,255,255,.75);font-size:.7rem;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+    td{padding:11px 13px;border-bottom:1px solid #f0f0f0;font-size:.83rem;vertical-align:middle}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:#fafafa}
+    .thumb{width:65px;height:46px;border-radius:7px;object-fit:cover;display:block}
+    .no-thumb{width:65px;height:46px;border-radius:7px;background:#f0f0f0;display:flex;
+      align-items:center;justify-content:center;font-size:1.2rem;border:1.5px dashed #ddd}
+    .place-name{font-weight:600;color:var(--navy)}
+    .place-sub{font-size:.73rem;color:var(--txt-lt);margin-top:2px}
+    .badge{display:inline-block;font-size:.66rem;font-weight:700;padding:2px 8px;border-radius:50px}
+    .badge-warn{background:#FFF3CD;color:#856404}
+    .badge-ok{background:#D1FAE5;color:#065F46}
+    .badge-cat{background:#EBF4FF;color:#1a56db}
+    .badge-info{background:#e0f2fe;color:#0369a1}
+    .badge-purple{background:#f3e8ff;color:#6b21a8}
+    .stars{color:#f59e0b;font-size:.85rem}
+
+    /* IMAGE INPUT */
+    .img-row{display:flex;gap:6px;align-items:center}
+    .img-inp{flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;
+      font-size:.78rem;outline:none;transition:border .2s;min-width:160px}
+    .img-inp:focus{border-color:var(--saffron)}
+    .img-inp.saved{border-color:var(--success);background:#f0fff4}
+
+    /* FORM */
+    .form-wrap{background:white;border-radius:var(--radius);box-shadow:var(--shadow);padding:24px}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+    .fg{display:flex;flex-direction:column;gap:4px}
+    .fg.full{grid-column:1/-1}
+    .fg label{font-size:.7rem;font-weight:700;color:var(--txt-mid);text-transform:uppercase;letter-spacing:.5px}
+    .fc{padding:9px 13px;border:1.5px solid var(--border);border-radius:9px;font-size:.88rem;
+      outline:none;transition:border .2s;width:100%}
+    .fc:focus{border-color:var(--saffron)}
+    .img-prev{width:100%;height:140px;border-radius:9px;border:2px dashed #ddd;
+      display:flex;align-items:center;justify-content:center;background:#f9f9f9;
+      overflow:hidden;margin-top:5px}
+    .img-prev img{width:100%;height:100%;object-fit:cover}
+    .img-prev span{color:var(--txt-lt);font-size:.8rem}
+
+    /* PAGINATION */
+    .pag{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:14px;flex-wrap:wrap}
+    .pg-btn{background:white;border:1.5px solid var(--border);border-radius:7px;padding:6px 11px;
+      font-size:.8rem;font-weight:600;cursor:pointer;transition:all .2s}
+    .pg-btn:hover,.pg-btn.active{background:var(--saffron);color:white;border-color:var(--saffron)}
+    .pg-btn:disabled{opacity:.4;cursor:not-allowed}
+
+    /* MODAL */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;
+      align-items:center;justify-content:center;padding:20px}
+    .modal-overlay.open{display:flex}
+    .modal{background:white;border-radius:20px;padding:28px;max-width:700px;width:100%;
+      max-height:90vh;overflow-y:auto;box-shadow:0 40px 100px rgba(0,0,0,.3)}
+    .modal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+    .modal-hdr h3{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--navy)}
+    .modal-close{background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--txt-lt);
+      width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+    .modal-close:hover{background:#f0f0f0}
+
+    /* TOAST */
+    .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);
+      background:var(--navy);color:white;padding:11px 22px;border-radius:50px;
+      font-weight:600;font-size:.85rem;z-index:9999;transition:transform .4s cubic-bezier(.34,1.56,.64,1);
+      pointer-events:none;box-shadow:0 8px 30px rgba(0,0,0,.25);white-space:nowrap}
+    .toast.show{transform:translateX(-50%) translateY(0)}
+    .toast.ok{background:var(--success)}.toast.err{background:var(--danger)}
+
+    /* EMPTY STATE */
+    .empty{text-align:center;padding:48px 24px;color:var(--txt-lt)}
+    .empty .icon{font-size:2.5rem;margin-bottom:12px}
+    .empty p{font-size:.9rem}
+
+    /* ACTION BTNS GROUP */
+    .action-group{display:flex;gap:5px;flex-wrap:wrap}
+
+    /* INFO CARD */
+    .info-card{background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:14px;margin-bottom:16px;font-size:.83rem;color:#0369a1}
+    .info-card strong{display:block;margin-bottom:4px}
+
+    @media(max-width:768px){
+      .sidebar{display:none}.main{margin-left:0}
+      .form-grid,.form-grid-3{grid-template-columns:1fr}
+      .page{padding:14px}
+      .stats-row{grid-template-columns:1fr 1fr}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── LOGIN ─────────────────────────────────────────────── -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-brand">🧭 Travel<span>Guru</span></div>
+    <div class="login-sub">Admin Panel Access</div>
+    <div class="login-creds">
+      <p>🔐 <strong>Admin Credentials</strong></p>
+      <!-- <p>ID: <code>admin@travelguru.in</code></p> -->
+      <!-- <p>Password: <code>Admin@TG2025#Secure</code></p> -->
+    </div>
+    <label class="login-label" for="adminIdInput">Admin ID (Email)</label>
+    <input class="login-input" type="email" id="adminIdInput" placeholder="Enter admin ID" autocomplete="username"/>
+    <label class="login-label" for="adminPassInput">Password</label>
+    <input class="login-input" type="password" id="adminPassInput" placeholder="Enter admin password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <button class="login-btn" onclick="doLogin()">🔐 Sign In</button>
+    <div class="login-err" id="loginErr">❌ Invalid Admin ID or Password</div>
+  </div>
+</div>
+
+<!-- ── ADMIN APP ───────────────────────────────────────────── -->
+<div id="adminApp">
+  <div class="layout">
+
+    <nav class="sidebar">
+      <div class="sidebar-brand">
+        <h2>🧭 Travel<span>Guru</span></h2>
+        <p>Admin Panel v2</p>
+      </div>
+      <div class="nav">
+        <div class="nav-group">Overview</div>
+        <div class="nav-item active" onclick="go('dashboard')"><span class="nav-icon">📊</span>Dashboard</div>
+
+        <div class="nav-group">Destinations</div>
+        <div class="nav-item" onclick="go('images')"><span class="nav-icon">🖼️</span>Manage Images</div>
+        <div class="nav-item" onclick="go('places')"><span class="nav-icon">📍</span>All Places</div>
+        <div class="nav-item" onclick="go('add')"><span class="nav-icon">➕</span>Add New Place</div>
+
+        <div class="nav-group">Travel Info</div>
+        <div class="nav-item" onclick="go('hotels')"><span class="nav-icon">🏨</span>Hotels</div>
+        <div class="nav-item" onclick="go('restaurants')"><span class="nav-icon">🍽️</span>Restaurants</div>
+        <div class="nav-item" onclick="go('budgets')"><span class="nav-icon">💰</span>Budget Guide</div>
+        <div class="nav-item" onclick="go('tips')"><span class="nav-icon">💡</span>Travel Tips</div>
+
+        <div class="nav-group">Community</div>
+        <div class="nav-item" onclick="go('users')"><span class="nav-icon">👥</span>Users</div>
+        <div class="nav-item" onclick="window.open('/')"><span class="nav-icon">🌐</span>View Website</div>
+      </div>
+      <div class="sidebar-foot">
+        <div style="font-size:.7rem;color:rgba(255,255,255,.3);margin-bottom:8px;text-align:center" id="adminLabel"></div>
+        <button class="logout-btn" onclick="doLogout()">🚪 Sign Out</button>
+      </div>
+    </nav>
+
+    <div class="main">
+      <div class="topbar">
+        <h1 id="pageTitle">Dashboard</h1>
+        <div class="topbar-right">
+          <span class="admin-id-badge" id="adminIdBadge"></span>
+          <span class="admin-badge">🔐 ADMIN</span>
+        </div>
+      </div>
+
+      <!-- ── DASHBOARD ──────────────────────────────────── -->
+      <div class="page active" id="page-dashboard">
+        <div class="stats-row">
+          <div class="stat-card" onclick="go('places')">
+            <div class="stat-num" id="s-places">—</div><div class="stat-lbl">📍 Places</div>
+          </div>
+          <div class="stat-card red" onclick="go('images')">
+            <div class="stat-num" id="s-noimg">—</div><div class="stat-lbl">⚠️ No Image</div>
+          </div>
+          <div class="stat-card green" onclick="go('users')">
+            <div class="stat-num" id="s-users">—</div><div class="stat-lbl">👥 Users</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-num" id="s-msgs">—</div><div class="stat-lbl">💬 Messages</div>
+          </div>
+          <div class="stat-card purple" onclick="go('hotels')">
+            <div class="stat-num" id="s-hotels">—</div><div class="stat-lbl">🏨 Hotels</div>
+          </div>
+          <div class="stat-card teal" onclick="go('restaurants')">
+            <div class="stat-num" id="s-restaurants">—</div><div class="stat-lbl">🍽️ Restaurants</div>
+          </div>
+          <div class="stat-card" onclick="go('budgets')">
+            <div class="stat-num" id="s-budgets">—</div><div class="stat-lbl">💰 Budgets</div>
+          </div>
+        </div>
+        <div class="tbl-wrap" style="padding:32px;text-align:center;color:var(--txt-lt)">
+          <p style="font-size:1.15rem;font-weight:700;color:var(--navy);margin-bottom:8px">👋 Welcome to Travel Guru Admin</p>
+          <p style="margin-bottom:20px">Full control of all places, images, hotels, restaurants, budgets and travel tips</p>
+          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="go('images')">🖼️ Manage Images</button>
+            <button class="btn btn-outline" onclick="go('add')">➕ Add Place</button>
+            <button class="btn btn-info" onclick="go('hotels')">🏨 Add Hotel</button>
+            <button class="btn btn-success" onclick="go('restaurants')">🍽️ Add Restaurant</button>
+            <button class="btn btn-primary" onclick="go('budgets')">💰 Budget Guide</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── IMAGES PAGE ────────────────────────────────── -->
+      <div class="page" id="page-images">
+        <div class="sec-hdr">
+          <h2>Manage Place Images</h2>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span id="noImgBadge" class="badge badge-warn"></span>
+            <button class="btn btn-sm btn-success" onclick="bulkSave()">💾 Save All</button>
+          </div>
+        </div>
+        <div class="info-card">
+          <strong>💡 How to add real images</strong>
+          Paste any image URL from Wikimedia Commons, your own hosting, or any public image link. The image will be previewed instantly. Press Save to update.
+          Or click <strong>🪄 Auto-fix all</strong> below to automatically pull a real photo from Wikipedia and find real nearby hotels &amp; restaurants (via OpenStreetMap) for every place — no manual pasting needed.
+        </div>
+        <div class="filters" style="align-items:center">
+          <button class="btn btn-sm" onclick="autoEnrichBulk()" id="bulkAeBtn">🪄 Auto-fix all (real images + nearby hotels/restaurants)</button>
+          <span id="bulkAeStatus" style="font-size:.8rem;color:var(--txt-lt)"></span>
+        </div>
+        <div class="filters">
+          <input class="fi" id="imgQ" placeholder="🔍 Search place…" oninput="renderImgTbl()"/>
+          <select class="fi" id="imgState" onchange="renderImgTbl()"><option value="">All States</option></select>
+          <select class="fi" id="imgCat" onchange="renderImgTbl()"><option value="">All Categories</option></select>
+          <select class="fi" id="imgStatus" onchange="renderImgTbl()">
+            <option value="">All</option>
+            <option value="missing">⚠️ Missing Image</option>
+            <option value="has">✅ Has Image</option>
+          </select>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Preview</th><th>Place</th><th>State</th><th>Category</th><th>Image URL</th><th>Actions</th></tr></thead>
+            <tbody id="imgTbody"></tbody>
+          </table>
+        </div>
+        <div class="pag" id="imgPag"></div>
+      </div>
+
+
+      <!-- ── ALL PLACES ─────────────────────────────────── -->
+      <div class="page" id="page-places">
+        <div class="sec-hdr">
+          <h2>All Places</h2>
+          <button class="btn btn-primary" onclick="go('add')">➕ Add Place</button>
+        </div>
+        <div class="filters">
+          <input class="fi" id="plQ" placeholder="🔍 Search…" oninput="renderPlaceTbl()"/>
+          <select class="fi" id="plState" onchange="renderPlaceTbl()"><option value="">All States</option></select>
+          <select class="fi" id="plCat" onchange="renderPlaceTbl()"><option value="">All Categories</option></select>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Image</th><th>Name</th><th>State</th><th>Category</th><th>Featured</th><th>Actions</th></tr></thead>
+            <tbody id="plTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── ADD PLACE ──────────────────────────────────── -->
+      <div class="page" id="page-add">
+        <div class="sec-hdr"><h2>Add New Place</h2></div>
+        <div class="form-wrap">
+          <div class="form-grid">
+            <div class="fg"><label>Place Name *</label><input class="fc" id="np-name" placeholder="e.g. Dudhsagar Falls"/></div>
+            <div class="fg"><label>State *</label>
+              <select class="fc" id="np-state"><option value="">Select State</option>
+                <option>Andhra Pradesh</option><option>Arunachal Pradesh</option><option>Assam</option>
+                <option>Bihar</option><option>Chhattisgarh</option><option>Goa</option>
+                <option>Gujarat</option><option>Haryana</option><option>Himachal Pradesh</option>
+                <option>Jharkhand</option><option>Karnataka</option><option>Kerala</option>
+                <option>Madhya Pradesh</option><option>Maharashtra</option><option>Manipur</option>
+                <option>Meghalaya</option><option>Mizoram</option><option>Nagaland</option>
+                <option>Odisha</option><option>Punjab</option><option>Rajasthan</option>
+                <option>Sikkim</option><option>Tamil Nadu</option><option>Telangana</option>
+                <option>Tripura</option><option>Uttar Pradesh</option><option>Uttarakhand</option>
+                <option>West Bengal</option><option>Andaman & Nicobar</option><option>Chandigarh</option>
+                <option>Delhi</option><option>Jammu & Kashmir</option><option>Ladakh</option>
+                <option>Lakshadweep</option><option>Puducherry</option>
+              </select>
+            </div>
+            <div class="fg"><label>Category *</label>
+              <select class="fc" id="np-category"><option value="">Select Category</option>
+                <option>Mountains</option><option>Waterfalls</option><option>Hill Stations</option>
+                <option>Beaches</option><option>Forts & Palaces</option><option>Monsoon Treks</option>
+                <option>Wildlife Sanctuaries</option><option>Caves</option><option>Jungle Safaris</option>
+                <option>Temples</option><option>Mosques</option><option>Churches</option>
+                <option>Gurudwaras</option><option>Dams & Reservoirs</option><option>Lakes</option>
+                <option>Deserts</option><option>Islands</option><option>Backwaters</option>
+                <option>Heritage Sites</option><option>Museums</option><option>Zoos & Aquariums</option>
+                <option>Botanical Gardens</option><option>Amusement Parks</option>
+                <option>National Parks</option><option>Bird Sanctuaries</option>
+                <option>Viewpoints & Scenic Spots</option><option>Hot Springs</option>
+                <option>Camping Sites</option><option>Adventure Sports</option>
+                <option>Waterbodies</option><option>Bridges & Architecture</option>
+                <option>Lighthouses</option><option>Art Galleries</option>
+                <option>Archaeological Sites</option><option>Palaces</option>
+                <option>Markets & Bazaars</option><option>Waterfronts & Ghats</option>
+                <option>Pilgrimage Sites</option><option>Ski Resorts</option>
+                <option>Valleys</option><option>Passes</option><option>Plateaus</option>
+              </select>
+            </div>
+            <div class="fg"><label>Emoji</label><input class="fc" id="np-emoji" placeholder="🏔️"/></div>
+            <div class="fg"><label>Best Time to Visit</label><input class="fc" id="np-bestTime" placeholder="Oct–Mar"/></div>
+            <div class="fg"><label>Difficulty</label>
+              <select class="fc" id="np-difficulty"><option>Easy</option><option>Moderate</option><option>Hard</option></select>
+            </div>
+            <div class="fg"><label>Nearest City</label><input class="fc" id="np-city" placeholder="Madurai (0 km)"/></div>
+            <div class="fg"><label>Entry Fee</label><input class="fc" id="np-fee" placeholder="₹150 or Free"/></div>
+            <div class="fg"><label>Latitude</label><input class="fc" id="np-lat" type="number" step="any" placeholder="27.17"/></div>
+            <div class="fg"><label>Longitude</label><input class="fc" id="np-lng" type="number" step="any" placeholder="78.04"/></div>
+            <div class="fg full"><label>Description *</label><textarea class="fc" id="np-desc" rows="3" placeholder="Write a vivid, accurate description of this place…"></textarea></div>
+            <div class="fg full"><label>History</label><textarea class="fc" id="np-history" rows="3" placeholder="Write the historical background of this place…"></textarea></div>
+            <div class="fg full">
+              <label>Image URL (Real photo of this place)</label>
+              <input class="fc" id="np-img" placeholder="https://upload.wikimedia.org/… or any public image URL" oninput="prevNewImg()"/>
+              <div class="img-prev" id="np-prev"><span>📸 Image preview will appear here</span></div>
+            </div>
+            <div class="fg"><label>Featured on Homepage?</label>
+              <select class="fc" id="np-featured"><option value="false">No</option><option value="true">Yes</option></select>
+            </div>
+          </div>
+          <div style="margin-top:18px;display:flex;gap:10px">
+            <button class="btn btn-primary" onclick="addPlace()">➕ Add Place</button>
+            <button class="btn btn-outline" onclick="clearAddForm()">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── HOTELS ─────────────────────────────────────── -->
+      <div class="page" id="page-hotels">
+        <div class="sec-hdr">
+          <h2>Hotels Management</h2>
+          <button class="btn btn-primary" onclick="openHotelModal()">🏨 Add Hotel</button>
+        </div>
+        <div class="filters">
+          <input class="fi" id="htQ" placeholder="🔍 Search hotel or place…" oninput="renderHotelTbl()"/>
+          <select class="fi" id="htPlace" onchange="renderHotelTbl()"><option value="">All Places</option></select>
+          <select class="fi" id="htType" onchange="renderHotelTbl()">
+            <option value="">All Types</option>
+            <option>Hotel</option><option>Resort</option><option>Homestay</option>
+            <option>Hostel</option><option>Guesthouse</option>
+          </select>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Image</th><th>Hotel Name</th><th>Place</th><th>Type</th><th>Stars</th><th>Price/Night</th><th>Actions</th></tr></thead>
+            <tbody id="htTbody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="htEmpty" style="display:none">
+          <div class="icon">🏨</div>
+          <p>No hotels added yet. Click "Add Hotel" to get started.</p>
+        </div>
+      </div>
+
+      <!-- ── RESTAURANTS ────────────────────────────────── -->
+      <div class="page" id="page-restaurants">
+        <div class="sec-hdr">
+          <h2>Restaurants Management</h2>
+          <button class="btn btn-primary" onclick="openRestModal()">🍽️ Add Restaurant</button>
+        </div>
+        <div class="filters">
+          <input class="fi" id="rstQ" placeholder="🔍 Search restaurant or place…" oninput="renderRestTbl()"/>
+          <select class="fi" id="rstPlace" onchange="renderRestTbl()"><option value="">All Places</option></select>
+          <select class="fi" id="rstPrice" onchange="renderRestTbl()">
+            <option value="">All Budgets</option>
+            <option>₹</option><option>₹₹</option><option>₹₹₹</option><option>₹₹₹₹</option>
+          </select>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Image</th><th>Restaurant</th><th>Place</th><th>Cuisine</th><th>Price</th><th>Rating</th><th>Specialty</th><th>Actions</th></tr></thead>
+            <tbody id="rstTbody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="rstEmpty" style="display:none">
+          <div class="icon">🍽️</div>
+          <p>No restaurants added yet. Click "Add Restaurant" to get started.</p>
+        </div>
+      </div>
+
+      <!-- ── BUDGETS ─────────────────────────────────────── -->
+      <div class="page" id="page-budgets">
+        <div class="sec-hdr">
+          <h2>Budget Guide</h2>
+          <button class="btn btn-primary" onclick="openBudgetModal()">💰 Add/Edit Budget</button>
+        </div>
+        <div class="info-card">
+          <strong>💡 Budget Guide</strong>
+          Add per-person per-day cost estimates for each destination — Budget, Mid-range and Luxury tiers. Visitors use this to plan their trip spend.
+        </div>
+        <div class="filters">
+          <select class="fi" id="bgPlace" onchange="renderBudgetTbl()"><option value="">All Places</option></select>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Place</th><th>Budget (₹/day)</th><th>Mid-Range</th><th>Luxury</th><th>Ideal Days</th><th>Hotel Range</th><th>Actions</th></tr></thead>
+            <tbody id="bgTbody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="bgEmpty" style="display:none">
+          <div class="icon">💰</div>
+          <p>No budget guides yet. Click "Add/Edit Budget" to get started.</p>
+        </div>
+      </div>
+
+      <!-- ── TRAVEL TIPS ─────────────────────────────────── -->
+      <div class="page" id="page-tips">
+        <div class="sec-hdr">
+          <h2>Travel Tips</h2>
+          <button class="btn btn-primary" onclick="openTipModal()">💡 Add Tip</button>
+        </div>
+        <div class="filters">
+          <input class="fi" id="tipQ" placeholder="🔍 Search tips…" oninput="renderTipTbl()"/>
+          <select class="fi" id="tipPlace" onchange="renderTipTbl()"><option value="">All Places</option></select>
+          <select class="fi" id="tipCat" onchange="renderTipTbl()">
+            <option value="">All Categories</option>
+            <option>General</option><option>Safety</option><option>Transport</option>
+            <option>Food</option><option>Accommodation</option><option>Culture</option>
+          </select>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Place</th><th>Category</th><th>Priority</th><th>Tip</th><th>Actions</th></tr></thead>
+            <tbody id="tipTbody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="tipEmpty" style="display:none">
+          <div class="icon">💡</div>
+          <p>No tips added yet. Click "Add Tip" to get started.</p>
+        </div>
+      </div>
+
+      <!-- ── USERS ───────────────────────────────────────── -->
+      <div class="page" id="page-users">
+        <div class="sec-hdr"><h2>Registered Users</h2></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Home State</th><th>Wishlist</th><th>Joined</th></tr></thead>
+            <tbody id="userTbody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="userEmpty" style="display:none">
+          <div class="icon">👥</div>
+          <p>No users registered yet.</p>
+        </div>
+      </div>
+
+    </div><!-- /main -->
+  </div>
+</div>
+
+<!-- ── EDIT PLACE MODAL ──────────────────────────────────── -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h3>✏️ Edit Place</h3>
+      <button class="modal-close" onclick="closeModal('editModal')">✕</button>
+    </div>
+    <div class="form-grid">
+      <input type="hidden" id="edit-pid"/>
+      <div class="fg"><label>Place Name *</label><input class="fc" id="edit-name"/></div>
+      <div class="fg"><label>State *</label>
+        <select class="fc" id="edit-state">
+          <option>Andhra Pradesh</option><option>Arunachal Pradesh</option><option>Assam</option>
+          <option>Bihar</option><option>Chhattisgarh</option><option>Goa</option>
+          <option>Gujarat</option><option>Haryana</option><option>Himachal Pradesh</option>
+          <option>Jharkhand</option><option>Karnataka</option><option>Kerala</option>
+          <option>Madhya Pradesh</option><option>Maharashtra</option><option>Manipur</option>
+          <option>Meghalaya</option><option>Mizoram</option><option>Nagaland</option>
+          <option>Odisha</option><option>Punjab</option><option>Rajasthan</option>
+          <option>Sikkim</option><option>Tamil Nadu</option><option>Telangana</option>
+          <option>Tripura</option><option>Uttar Pradesh</option><option>Uttarakhand</option>
+          <option>West Bengal</option><option>Andaman & Nicobar</option><option>Chandigarh</option>
+          <option>Delhi</option><option>Jammu & Kashmir</option><option>Ladakh</option>
+          <option>Lakshadweep</option><option>Puducherry</option>
+        </select>
+      </div>
+      <div class="fg"><label>Category</label>
+        <select class="fc" id="edit-category">
+          <option>Mountains</option><option>Waterfalls</option><option>Hill Stations</option>
+          <option>Beaches</option><option>Forts & Palaces</option><option>Monsoon Treks</option>
+          <option>Wildlife Sanctuaries</option><option>Caves</option><option>Jungle Safaris</option>
+          <option>Temples</option><option>Mosques</option><option>Churches</option>
+          <option>Gurudwaras</option><option>Dams & Reservoirs</option><option>Lakes</option>
+          <option>Deserts</option><option>Islands</option><option>Backwaters</option>
+          <option>Heritage Sites</option><option>Museums</option><option>National Parks</option>
+          <option>Bird Sanctuaries</option><option>Viewpoints & Scenic Spots</option>
+          <option>Archaeological Sites</option><option>Palaces</option>
+          <option>Markets & Bazaars</option><option>Waterfronts & Ghats</option>
+          <option>Pilgrimage Sites</option><option>Ski Resorts</option>
+          <option>Valleys</option><option>Passes</option><option>Plateaus</option>
+        </select>
+      </div>
+      <div class="fg"><label>Emoji</label><input class="fc" id="edit-emoji"/></div>
+      <div class="fg"><label>Best Time</label><input class="fc" id="edit-bestTime"/></div>
+      <div class="fg"><label>Difficulty</label>
+        <select class="fc" id="edit-difficulty"><option>Easy</option><option>Moderate</option><option>Hard</option></select>
+      </div>
+      <div class="fg"><label>Nearest City</label><input class="fc" id="edit-city"/></div>
+      <div class="fg"><label>Entry Fee</label><input class="fc" id="edit-fee"/></div>
+      <div class="fg"><label>Latitude</label><input class="fc" id="edit-lat" type="number" step="any"/></div>
+      <div class="fg"><label>Longitude</label><input class="fc" id="edit-lng" type="number" step="any"/></div>
+      <div class="fg full"><label>Description</label><textarea class="fc" id="edit-desc" rows="3"></textarea></div>
+      <div class="fg full"><label>History</label><textarea class="fc" id="edit-history" rows="3"></textarea></div>
+      <div class="fg full">
+        <label>Image URL</label>
+        <input class="fc" id="edit-img" placeholder="https://…" oninput="prevEditImg()"/>
+        <div class="img-prev" id="edit-prev"><span>Image preview</span></div>
+      </div>
+      <div class="fg"><label>Featured?</label>
+        <select class="fc" id="edit-featured"><option value="false">No</option><option value="true">Yes</option></select>
+      </div>
+    </div>
+    <div style="margin-top:18px;display:flex;gap:10px">
+      <button class="btn btn-primary" onclick="saveEdit()">💾 Save Changes</button>
+      <button class="btn btn-outline" onclick="closeModal('editModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── HOTEL MODAL ───────────────────────────────────────── -->
+<div class="modal-overlay" id="hotelModal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h3 id="hotelModalTitle">🏨 Add Hotel</h3>
+      <button class="modal-close" onclick="closeModal('hotelModal')">✕</button>
+    </div>
+    <input type="hidden" id="ht-id"/>
+    <div class="form-grid">
+      <div class="fg full"><label>Hotel Name *</label><input class="fc" id="ht-name" placeholder="e.g. The Grand Himalaya Resort"/></div>
+      <div class="fg"><label>Destination Place *</label>
+        <select class="fc" id="ht-placeId"><option value="">Select Destination</option></select>
+      </div>
+      <div class="fg"><label>Type</label>
+        <select class="fc" id="ht-type">
+          <option>Hotel</option><option>Resort</option><option>Homestay</option>
+          <option>Hostel</option><option>Guesthouse</option>
+        </select>
+      </div>
+      <div class="fg"><label>Stars (1-5)</label>
+        <select class="fc" id="ht-stars">
+          <option value="1">⭐ 1 Star</option><option value="2">⭐⭐ 2 Stars</option>
+          <option value="3">⭐⭐⭐ 3 Stars</option><option value="4" selected>⭐⭐⭐⭐ 4 Stars</option>
+          <option value="5">⭐⭐⭐⭐⭐ 5 Stars</option>
+        </select>
+      </div>
+      <div class="fg"><label>Price Per Night</label><input class="fc" id="ht-price" placeholder="₹2,500 – ₹8,000"/></div>
+      <div class="fg"><label>Phone</label><input class="fc" id="ht-phone" placeholder="+91 98765 43210"/></div>
+      <div class="fg full"><label>Address</label><input class="fc" id="ht-address" placeholder="Full address of the hotel"/></div>
+      <div class="fg full"><label>Website</label><input class="fc" id="ht-website" placeholder="https://hotelwebsite.com"/></div>
+      <div class="fg full"><label>Google Maps Link</label><input class="fc" id="ht-map" placeholder="https://maps.google.com/?q=…"/></div>
+      <div class="fg full"><label>Amenities (comma-separated)</label><input class="fc" id="ht-amenities" placeholder="WiFi, Pool, Gym, Restaurant, Parking"/></div>
+      <div class="fg full">
+        <label>Image URL</label>
+        <input class="fc" id="ht-img" placeholder="https://… real photo of the hotel" oninput="prevHotelImg()"/>
+        <div class="img-prev" id="ht-prev"><span>📸 Hotel image preview</span></div>
+      </div>
+    </div>
+    <div style="margin-top:18px;display:flex;gap:10px">
+      <button class="btn btn-primary" onclick="saveHotel()">💾 Save Hotel</button>
+      <button class="btn btn-outline" onclick="closeModal('hotelModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── RESTAURANT MODAL ──────────────────────────────────── -->
+<div class="modal-overlay" id="restModal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h3 id="restModalTitle">🍽️ Add Restaurant</h3>
+      <button class="modal-close" onclick="closeModal('restModal')">✕</button>
+    </div>
+    <input type="hidden" id="rst-id"/>
+    <div class="form-grid">
+      <div class="fg full"><label>Restaurant Name *</label><input class="fc" id="rst-name" placeholder="e.g. Spice Garden"/></div>
+      <div class="fg"><label>Destination Place *</label>
+        <select class="fc" id="rst-placeId"><option value="">Select Destination</option></select>
+      </div>
+      <div class="fg"><label>Cuisine Type</label><input class="fc" id="rst-cuisine" placeholder="North Indian, Chinese, Multi-Cuisine…"/></div>
+      <div class="fg"><label>Price Range</label>
+        <select class="fc" id="rst-priceRange">
+          <option>₹</option><option selected>₹₹</option><option>₹₹₹</option><option>₹₹₹₹</option>
+        </select>
+      </div>
+      <div class="fg"><label>Rating (1-5)</label>
+        <select class="fc" id="rst-rating">
+          <option value="1">⭐ 1</option><option value="2">⭐⭐ 2</option>
+          <option value="3">⭐⭐⭐ 3</option><option value="4" selected>⭐⭐⭐⭐ 4</option>
+          <option value="5">⭐⭐⭐⭐⭐ 5</option>
+        </select>
+      </div>
+      <div class="fg"><label>Phone</label><input class="fc" id="rst-phone" placeholder="+91 98765 43210"/></div>
+      <div class="fg full"><label>Address</label><input class="fc" id="rst-address" placeholder="Full address"/></div>
+      <div class="fg full"><label>Must-Try Specialty Dish</label><input class="fc" id="rst-specialty" placeholder="e.g. Rogan Josh, Thali, Biryani"/></div>
+      <div class="fg full"><label>Opening Hours</label><input class="fc" id="rst-timing" placeholder="e.g. 8 AM – 10 PM (All days)"/></div>
+      <div class="fg full"><label>Website</label><input class="fc" id="rst-website" placeholder="https://restaurantwebsite.com"/></div>
+      <div class="fg full"><label>Google Maps Link</label><input class="fc" id="rst-map" placeholder="https://maps.google.com/?q=…"/></div>
+      <div class="fg full">
+        <label>Image URL</label>
+        <input class="fc" id="rst-img" placeholder="https://… real photo of the restaurant" oninput="prevRestImg()"/>
+        <div class="img-prev" id="rst-prev"><span>📸 Restaurant image preview</span></div>
+      </div>
+    </div>
+    <div style="margin-top:18px;display:flex;gap:10px">
+      <button class="btn btn-primary" onclick="saveRestaurant()">💾 Save Restaurant</button>
+      <button class="btn btn-outline" onclick="closeModal('restModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── BUDGET MODAL ──────────────────────────────────────── -->
+<div class="modal-overlay" id="budgetModal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h3 id="budgetModalTitle">💰 Budget Guide</h3>
+      <button class="modal-close" onclick="closeModal('budgetModal')">✕</button>
+    </div>
+    <input type="hidden" id="bg-id"/>
+    <div class="form-grid">
+      <div class="fg full"><label>Destination Place *</label>
+        <select class="fc" id="bg-placeId"><option value="">Select Destination</option></select>
+      </div>
+      <div class="fg"><label>Budget Traveller (₹/person/day)</label><input class="fc" id="bg-min" type="number" placeholder="1500"/></div>
+      <div class="fg"><label>Mid-Range (₹/person/day)</label><input class="fc" id="bg-mid" type="number" placeholder="3500"/></div>
+      <div class="fg"><label>Luxury (₹/person/day)</label><input class="fc" id="bg-lux" type="number" placeholder="8000"/></div>
+      <div class="fg"><label>Ideal No. of Days</label><input class="fc" id="bg-days" type="number" placeholder="3"/></div>
+      <div class="fg"><label>Hotel Cost Range</label><input class="fc" id="bg-hotel" placeholder="₹500–₹4,000/night"/></div>
+      <div class="fg full"><label>Food Cost</label><input class="fc" id="bg-food" placeholder="₹150–₹800/day per person"/></div>
+      <div class="fg full"><label>Local Transport</label><input class="fc" id="bg-transport" placeholder="₹200–₹1,500/day (auto/taxi/jeep)"/></div>
+      <div class="fg full"><label>Additional Notes</label><textarea class="fc" id="bg-notes" rows="2" placeholder="Includes entry fees, tips, misc expenses…"></textarea></div>
+    </div>
+    <div style="margin-top:18px;display:flex;gap:10px">
+      <button class="btn btn-primary" onclick="saveBudget()">💾 Save Budget</button>
+      <button class="btn btn-outline" onclick="closeModal('budgetModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TIP MODAL ─────────────────────────────────────────── -->
+<div class="modal-overlay" id="tipModal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h3 id="tipModalTitle">💡 Add Travel Tip</h3>
+      <button class="modal-close" onclick="closeModal('tipModal')">✕</button>
+    </div>
+    <input type="hidden" id="tip-id"/>
+    <div class="form-grid">
+      <div class="fg"><label>Destination Place *</label>
+        <select class="fc" id="tip-placeId"><option value="">Select Destination</option></select>
+      </div>
+      <div class="fg"><label>Category</label>
+        <select class="fc" id="tip-category">
+          <option>General</option><option>Safety</option><option>Transport</option>
+          <option>Food</option><option>Accommodation</option><option>Culture</option>
+        </select>
+      </div>
+      <div class="fg"><label>Priority</label>
+        <select class="fc" id="tip-priority">
+          <option value="1">ℹ️ Info</option>
+          <option value="2">⚠️ Important</option>
+          <option value="3">🔴 Must-Know</option>
+        </select>
+      </div>
+      <div class="fg full"><label>Tip *</label>
+        <textarea class="fc" id="tip-text" rows="3" placeholder="e.g. Carry warm clothes even in summer — temperatures drop sharply at night…"></textarea>
+      </div>
+    </div>
+    <div style="margin-top:18px;display:flex;gap:10px">
+      <button class="btn btn-primary" onclick="saveTip()">💾 Save Tip</button>
+      <button class="btn btn-outline" onclick="closeModal('tipModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── State ──────────────────────────────────────────────── */
+let token       = localStorage.getItem('tg_admin_token') || null;
+let adminId     = localStorage.getItem('tg_admin_id')    || '';
+let places      = [];
+let hotels      = [];
+let restaurants = [];
+let budgets     = [];
+let tips        = [];
+let pending     = {};
+let imgPg       = 1;
+const PER       = 12;
+
+const TITLES = {
+  dashboard:'Dashboard', images:'Manage Images', places:'All Places',
+  add:'Add New Place', hotels:'Hotels Management', restaurants:'Restaurants Management',
+  budgets:'Budget Guide', tips:'Travel Tips', users:'Registered Users'
+};
+
+/* ── Boot ───────────────────────────────────────────────── */
+window.addEventListener('DOMContentLoaded', () => {
+  if (token) boot();
+});
+
+/* ── Login ──────────────────────────────────────────────── */
+async function doLogin() {
+  const aid  = document.getElementById('adminIdInput').value.trim();
+  const pass = document.getElementById('adminPassInput').value.trim();
+  if (!aid || !pass) { showErr('Please enter Admin ID and Password'); return; }
+
+  // Hardcoded credentials — always work without server
+  const VALID_ID   = 'admin@travelguru.in';
+  const VALID_PASS = 'Admin@TG2025#Secure';
+
+  // First try: server authentication
+  try {
+    const r = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ adminId: aid, password: pass })
+    });
+    const d = await r.json();
+    if (d.token) {
+      token   = d.token;
+      adminId = aid;
+      localStorage.setItem('tg_admin_token', token);
+      localStorage.setItem('tg_admin_id', adminId);
+      showErr('');
+      boot();
+      return;
+    }
+  } catch (e) {
+    console.warn('Server login failed, trying local check:', e.message);
+  }
+
+  // Second try: local credential check (works even if server has issues)
+  if (aid === VALID_ID && pass === VALID_PASS) {
+    // Generate a simple local token
+    const payload = btoa(JSON.stringify({ admin: true, adminId: aid, exp: Date.now() + 86400000 }));
+    token   = 'local.' + payload + '.sig';
+    adminId = aid;
+    localStorage.setItem('tg_admin_token', token);
+    localStorage.setItem('tg_admin_id', adminId);
+    showErr('');
+    boot();
+    return;
+  }
+
+  showErr('Invalid Admin ID or Password. Use: admin@travelguru.in / Admin@TG2025#Secure');
+}
+
+function showErr(msg) {
+  const el = document.getElementById('loginErr');
+  if (msg) { el.textContent = '❌ ' + msg; el.style.display = 'block'; }
+  else { el.style.display = 'none'; }
+}
+
+function doLogout() {
+  token = null; adminId = '';
+  localStorage.removeItem('tg_admin_token');
+  localStorage.removeItem('tg_admin_id');
+  document.getElementById('adminApp').style.display    = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('adminIdInput').value        = '';
+  document.getElementById('adminPassInput').value      = '';
+}
+
+/* ── Boot admin ─────────────────────────────────────────── */
+async function boot() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('adminApp').style.display    = 'block';
+  document.getElementById('adminIdBadge').textContent  = adminId || 'Admin';
+  document.getElementById('adminLabel').textContent    = adminId || '';
+  await Promise.all([loadStats(), loadPlaces(), loadHotels(), loadRestaurants(), loadBudgets(), loadTips()]);
+  populateFilters();
+}
+
+/* ── API ────────────────────────────────────────────────── */
+async function api(path, opts = {}) {
+  const h = { 'Content-Type':'application/json', 'Authorization':'Bearer '+token };
+  const r = await fetch(path, { headers: h, ...opts });
+  if (r.status === 401) { doLogout(); return null; }
+  return r.json();
+}
+
+/* ── Stats ──────────────────────────────────────────────── */
+async function loadStats() {
+  const s = await api('/api/admin/stats');
+  if (!s) return;
+  document.getElementById('s-places').textContent      = s.places      || 0;
+  document.getElementById('s-noimg').textContent       = s.noImage     || 0;
+  document.getElementById('s-users').textContent       = s.users       || 0;
+  document.getElementById('s-msgs').textContent        = s.messages    || 0;
+  document.getElementById('s-hotels').textContent      = s.hotels      || 0;
+  document.getElementById('s-restaurants').textContent = s.restaurants || 0;
+  document.getElementById('s-budgets').textContent     = s.budgets     || 0;
+}
+
+/* ── Load Data ──────────────────────────────────────────── */
+async function loadPlaces()      { places      = await api('/api/admin/places')      || []; renderImgTbl(); renderPlaceTbl(); updateNoImgBadge(); }
+async function loadHotels()      { hotels      = await api('/api/admin/hotels')      || []; renderHotelTbl(); }
+async function loadRestaurants() { restaurants = await api('/api/admin/restaurants') || []; renderRestTbl(); }
+async function loadBudgets()     { budgets     = await api('/api/admin/budgets')     || []; renderBudgetTbl(); }
+async function loadTips()        { tips        = await api('/api/admin/tips')        || []; renderTipTbl(); }
+async function loadUsers() {
+  const users = await api('/api/admin/users') || [];
+  const b = document.getElementById('userTbody');
+  const e = document.getElementById('userEmpty');
+  if (!users.length) { b.innerHTML=''; e.style.display='block'; return; }
+  e.style.display='none';
+  b.innerHTML = users.map((u,i)=>`
+    <tr>
+      <td style="color:var(--txt-lt)">${i+1}</td>
+      <td><strong>${e_(u.name)}</strong></td>
+      <td style="font-size:.8rem">${e_(u.email)}</td>
+      <td><span class="badge badge-info">${e_(u.homeState||'—')}</span></td>
+      <td><span class="badge badge-ok">${u.wishlist?.length||0} places</span></td>
+      <td style="font-size:.75rem;color:var(--txt-lt)">${new Date(u.createdAt).toLocaleDateString('en-IN')}</td>
+    </tr>`).join('');
+}
+
+/* ── Filters ────────────────────────────────────────────── */
+function populateFilters() {
+  const states = [...new Set(places.map(p=>p.state))].sort();
+  const cats   = [...new Set(places.map(p=>p.category))].sort();
+  ['imgState','plState'].forEach(id=>{
+    const s=document.getElementById(id); s.innerHTML='<option value="">All States</option>';
+    states.forEach(v=>s.appendChild(new Option(v,v)));
+  });
+  ['imgCat','plCat'].forEach(id=>{
+    const s=document.getElementById(id); s.innerHTML='<option value="">All Categories</option>';
+    cats.forEach(v=>s.appendChild(new Option(v,v)));
+  });
+  // Place selectors in modals and filters
+  const plOpts = '<option value="">All Places</option>' + places.map(p=>`<option value="${p.placeId}">${e_(p.name)} (${e_(p.state)})</option>`).join('');
+  ['htPlace','rstPlace','bgPlace','tipPlace'].forEach(id=>{
+    const s=document.getElementById(id); if(s) s.innerHTML=plOpts;
+  });
+  const plModalOpts = '<option value="">Select Destination</option>' + places.map(p=>`<option value="${p.placeId}">${e_(p.name)} (${e_(p.state)})</option>`).join('');
+  ['ht-placeId','rst-placeId','bg-placeId','tip-placeId'].forEach(id=>{
+    const s=document.getElementById(id); if(s) s.innerHTML=plModalOpts;
+  });
+}
+
+function updateNoImgBadge() {
+  const n = places.filter(p=>!p.img).length;
+  const b = document.getElementById('noImgBadge');
+  b.textContent = n ? `⚠️ ${n} missing` : '✅ All set';
+  b.className   = 'badge '+(n?'badge-warn':'badge-ok');
+}
+
+/* ── Nav ────────────────────────────────────────────────── */
+function go(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const pg = document.getElementById('page-'+id);
+  if (pg) pg.classList.add('active');
+  document.getElementById('pageTitle').textContent = TITLES[id] || id;
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    if (n.textContent.toLowerCase().includes(id.toLowerCase()) ||
+        (id==='dashboard' && n.textContent.includes('Dashboard')))
+      n.classList.add('active');
+  });
+  if (id==='users') loadUsers();
+}
+
+/* ── Auto-Enrich (real images + real nearby hotels/restaurants) ── */
+async function autoEnrich(pid) {
+  const btn = document.getElementById(`ae-${pid}`);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Fetching…'; }
+  try {
+    const d = await api(`/api/admin/places/${pid}/enrich`, { method: 'POST' });
+    if (d?.success) {
+      const idx = places.findIndex(p => p.placeId === pid);
+      if (idx > -1) places[idx] = d.place;
+      const r = d.result;
+      const parts = [];
+      if (r.imageFixed) parts.push('real photo added');
+      if (r.hotelsAdded) parts.push(`${r.hotelsAdded} hotels`);
+      if (r.restaurantsAdded) parts.push(`${r.restaurantsAdded} restaurants`);
+      toast(parts.length ? `✅ ${r.name}: ${parts.join(', ')}` : `ℹ️ ${r.name}: nothing new found nearby`, parts.length ? 'ok' : 'err');
+      renderImgTbl(); updateNoImgBadge(); loadStats();
+    } else toast('Error: ' + (d?.error || 'unknown'), 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🪄 Auto-fix'; }
+  }
+}
+
+async function autoEnrichBulk() {
+  const btn = document.getElementById('bulkAeBtn');
+  const status = document.getElementById('bulkAeStatus');
+  btn.disabled = true;
+  btn.textContent = '⏳ Starting…';
+  let totalFixed = 0;
+  try {
+    while (true) {
+      status.textContent = `Fixing place #${totalFixed + 1}… (this can take a few seconds per place)`;
+      const d = await api('/api/admin/places/enrich-bulk', { method: 'POST', body: JSON.stringify({ batchSize: 3 }) });
+      if (!d) { status.textContent = '❌ Stopped — session expired, please log in again.'; break; }
+      if (!d.success) { toast('Error: ' + (d.error || 'unknown'), 'err'); status.textContent = '❌ Error: ' + (d.error || 'unknown'); break; }
+      totalFixed += d.processed;
+      const lastNames = (d.results || []).map(r => r.name).join(', ');
+      status.textContent = `Fixed ${totalFixed} so far (${lastNames || '—'}) — ${d.remaining} remaining`;
+      btn.textContent = `⏳ Fixing… (${totalFixed} done)`;
+      if (d.done || d.processed === 0) break;
+    }
+    const fresh = await api('/api/admin/places');
+    if (Array.isArray(fresh)) places = fresh;
+    renderImgTbl(); updateNoImgBadge(); loadStats(); populateFilters();
+    status.textContent = `✅ Done — fixed ${totalFixed} places.`;
+    toast(`🪄 Auto-fix complete — ${totalFixed} places updated`, 'ok');
+  } catch (e) {
+    status.textContent = '❌ Error: ' + e.message;
+    toast('Auto-fix failed: ' + e.message, 'err');
+    console.error('autoEnrichBulk error:', e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🪄 Auto-fix all (real images + nearby hotels/restaurants)';
+  }
+}
+
+/* ── Image Table ────────────────────────────────────────── */
+function filteredImg() {
+  const q  = (document.getElementById('imgQ')?.value||'').toLowerCase();
+  const st = document.getElementById('imgState')?.value||'';
+  const ct = document.getElementById('imgCat')?.value||'';
+  const sx = document.getElementById('imgStatus')?.value||'';
+  return places.filter(p=>
+    (!q||p.name.toLowerCase().includes(q)||p.state.toLowerCase().includes(q))&&
+    (!st||p.state===st)&&(!ct||p.category===ct)&&
+    (!sx||(sx==='missing'&&!p.img)||(sx==='has'&&p.img))
+  );
+}
+
+function renderImgTbl() {
+  const fp  = filteredImg();
+  const pgs = Math.ceil(fp.length/PER);
+  if (imgPg>pgs) imgPg=1;
+  const rows= fp.slice((imgPg-1)*PER, imgPg*PER);
+  document.getElementById('imgTbody').innerHTML = rows.map(p=>{
+    const cur = pending[p.placeId]!==undefined ? pending[p.placeId] : (p.img||'');
+    return `<tr id="row-${p.placeId}">
+      <td>
+        ${cur
+          ? `<img class="thumb" id="th-${p.placeId}" src="${e_(cur)}" loading="lazy"
+               onerror="this.style.display='none';document.getElementById('nth-${p.placeId}').style.display='flex'"/>
+             <div class="no-thumb" id="nth-${p.placeId}" style="display:none">${p.emoji||'📍'}</div>`
+          : `<div class="no-thumb" id="nth-${p.placeId}">${p.emoji||'📍'}</div>`}
+      </td>
+      <td>
+        <div class="place-name">${e_(p.name)}</div>
+        <div class="place-sub"><span class="badge ${p.img?'badge-ok':'badge-warn'}">${p.img?'✅ Image set':'⚠️ No image'}</span></div>
+      </td>
+      <td style="font-size:.78rem">${e_(p.state)}</td>
+      <td><span class="badge badge-cat">${e_(p.category)}</span></td>
+      <td>
+        <div class="img-row">
+          <input class="img-inp" id="ii-${p.placeId}" value="${e_(cur)}"
+            placeholder="Paste image URL here…"
+            oninput="onImgIn(${p.placeId})"
+            onpaste="setTimeout(()=>onImgIn(${p.placeId}),80)"/>
+        </div>
+      </td>
+      <td>
+        <button class="btn btn-sm btn-success" onclick="saveImg(${p.placeId})">Save</button>
+        <button class="btn btn-sm" onclick="autoEnrich(${p.placeId})" id="ae-${p.placeId}" title="Auto-fetch real photo + nearby hotels/restaurants">🪄 Auto-fix</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Pagination
+  const pg = document.getElementById('imgPag');
+  pg.innerHTML = '';
+  if (pgs > 1) {
+    pg.appendChild(mkPgBtn('←', imgPg===1, ()=>{imgPg--;renderImgTbl();}));
+    for (let i=1;i<=pgs;i++) {
+      const b=mkPgBtn(i, false, ()=>{imgPg=i;renderImgTbl();});
+      if(i===imgPg)b.classList.add('active');
+      pg.appendChild(b);
+    }
+    pg.appendChild(mkPgBtn('→', imgPg===pgs, ()=>{imgPg++;renderImgTbl();}));
+  }
+}
+
+function mkPgBtn(l,d,fn){
+  const b=document.createElement('button');
+  b.className='pg-btn';b.textContent=l;b.disabled=d;b.onclick=fn;return b;
+}
+
+function onImgIn(pid) {
+  const inp=document.getElementById('ii-'+pid);
+  const val=inp.value.trim();
+  pending[pid]=val;
+  const th=document.getElementById('th-'+pid);
+  const nth=document.getElementById('nth-'+pid);
+  if(val){
+    if(th){th.src=val;th.style.display='block';if(nth)nth.style.display='none';}
+    else{
+      const img=document.createElement('img');
+      img.className='thumb';img.id='th-'+pid;img.src=val;img.loading='lazy';
+      img.onerror=()=>{img.style.display='none';if(nth)nth.style.display='flex';};
+      document.getElementById('row-'+pid)?.querySelector('td').prepend(img);
+      if(nth)nth.style.display='none';
+    }
+  }
+}
+
+async function saveImg(pid) {
+  const url=(document.getElementById('ii-'+pid)?.value||'').trim();
+  if(!url){toast('Enter an image URL first','err');return;}
+  const d=await api(`/api/admin/places/${pid}/image`,{method:'PUT',body:JSON.stringify({img:url})});
+  if(!d)return;
+  if(d.success){
+    const inp=document.getElementById('ii-'+pid);
+    if(inp){inp.classList.add('saved');setTimeout(()=>inp.classList.remove('saved'),2000);}
+    const idx=places.findIndex(p=>p.placeId===pid);
+    if(idx!==-1)places[idx].img=url;
+    delete pending[pid];
+    updateNoImgBadge();
+    toast(`✅ Image saved for ${places.find(p=>p.placeId===pid)?.name}`,'ok');
+    loadStats();
+  } else toast('❌ Failed to save','err');
+}
+
+async function bulkSave() {
+  const ids=Object.keys(pending).filter(k=>pending[k]);
+  if(!ids.length){toast('No pending changes','');return;}
+  let saved=0;
+  for(const id of ids){
+    const d=await api(`/api/admin/places/${id}/image`,{method:'PUT',body:JSON.stringify({img:pending[id]})});
+    if(d?.success){const idx=places.findIndex(p=>p.placeId===+id);if(idx!==-1)places[idx].img=pending[id];delete pending[id];saved++;}
+  }
+  toast(`✅ Saved ${saved} images!`,'ok');
+  updateNoImgBadge();loadStats();renderImgTbl();
+}
+
+/* ── Place Table ────────────────────────────────────────── */
+function renderPlaceTbl() {
+  const q  = (document.getElementById('plQ')?.value||'').toLowerCase();
+  const st = document.getElementById('plState')?.value||'';
+  const ct = document.getElementById('plCat')?.value||'';
+  const fp = places.filter(p=>
+    (!q||p.name.toLowerCase().includes(q))&&
+    (!st||p.state===st)&&(!ct||p.category===ct)
+  );
+  document.getElementById('plTbody').innerHTML = fp.map(p=>`
+    <tr>
+      <td style="font-size:.73rem;color:var(--txt-lt)">#${p.placeId}</td>
+      <td>${p.img
+        ?`<img class="thumb" src="${e_(p.img)}" loading="lazy" onerror="this.style.display='none'">`
+        :`<div class="no-thumb">${p.emoji||'📍'}</div>`}</td>
+      <td><div class="place-name">${e_(p.name)}</div><div class="place-sub">${e_(p.nearestCity)}</div></td>
+      <td style="font-size:.78rem">${e_(p.state)}</td>
+      <td><span class="badge badge-cat">${e_(p.category)}</span></td>
+      <td><span class="badge ${p.featured?'badge-ok':'badge-warn'}">${p.featured?'✅ Yes':'No'}</span></td>
+      <td>
+        <div class="action-group">
+          <button class="btn btn-sm btn-outline" onclick="openEdit(${p.placeId})" title="Edit">✏️</button>
+          <button class="btn btn-sm btn-info" onclick="jumpToImg(${p.placeId})" title="Image">🖼️</button>
+          <button class="btn btn-sm btn-danger" onclick="delPlace(${p.placeId},'${e_(p.name).replace(/'/g,"\\'")}')">🗑️</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function jumpToImg(pid) {
+  go('images');
+  setTimeout(()=>{
+    const el=document.getElementById('ii-'+pid);
+    if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.focus();}
+  },200);
+}
+
+async function delPlace(pid, name) {
+  if(!confirm(`Delete "${name}"?\nThis will also remove all hotels, restaurants and tips for this place.`))return;
+  const d=await api(`/api/admin/places/${pid}`,{method:'DELETE'});
+  if(d?.success){
+    places=places.filter(p=>p.placeId!==pid);
+    hotels=hotels.filter(h=>h.placeId!==pid);
+    restaurants=restaurants.filter(r=>r.placeId!==pid);
+    budgets=budgets.filter(b=>b.placeId!==pid);
+    tips=tips.filter(t=>t.placeId!==pid);
+    renderPlaceTbl();renderImgTbl();renderHotelTbl();renderRestTbl();renderBudgetTbl();renderTipTbl();
+    loadStats();updateNoImgBadge();populateFilters();
+    toast(`🗑️ "${name}" deleted`,'ok');
+  } else toast('Failed to delete','err');
+}
+
+/* ── Add Place ──────────────────────────────────────────── */
+function prevNewImg(){
+  const url=document.getElementById('np-img').value.trim();
+  const box=document.getElementById('np-prev');
+  box.innerHTML=url?`<img src="${e_(url)}" onerror="this.parentElement.innerHTML='<span>Cannot load image</span>'">`:'<span>📸 Image preview will appear here</span>';
+}
+
+async function addPlace(){
+  const name =document.getElementById('np-name').value.trim();
+  const state=document.getElementById('np-state').value;
+  const cat  =document.getElementById('np-category').value;
+  const desc =document.getElementById('np-desc').value.trim();
+  if(!name||!state||!cat||!desc){toast('Fill required fields: Name, State, Category, Description','err');return;}
+  const body={
+    name,state,category:cat,desc,
+    history:    document.getElementById('np-history').value.trim(),
+    emoji:      document.getElementById('np-emoji').value.trim()||'📍',
+    bestTime:   document.getElementById('np-bestTime').value.trim()||'Year-round',
+    difficulty: document.getElementById('np-difficulty').value,
+    nearestCity:document.getElementById('np-city').value.trim(),
+    entryFee:   document.getElementById('np-fee').value.trim()||'Free',
+    img:        document.getElementById('np-img').value.trim(),
+    featured:   document.getElementById('np-featured').value==='true',
+    lat:        +document.getElementById('np-lat').value||0,
+    lng:        +document.getElementById('np-lng').value||0,
+    bg:'linear-gradient(135deg,#667eea,#764ba2)',
+  };
+  const d=await api('/api/admin/places',{method:'POST',body:JSON.stringify(body)});
+  if(d?.success){
+    places.push(d.place);
+    toast(`✅ "${name}" added!`,'ok');
+    clearAddForm();go('places');renderPlaceTbl();loadStats();updateNoImgBadge();populateFilters();
+  } else toast('Error: '+(d?.error||'unknown'),'err');
+}
+
+function clearAddForm(){
+  ['np-name','np-emoji','np-bestTime','np-city','np-fee','np-img','np-desc','np-history','np-lat','np-lng'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  document.getElementById('np-state').value='';
+  document.getElementById('np-category').value='';
+  document.getElementById('np-difficulty').value='Easy';
+  document.getElementById('np-featured').value='false';
+  document.getElementById('np-prev').innerHTML='<span>📸 Image preview will appear here</span>';
+}
+
+/* ── Edit Place ─────────────────────────────────────────── */
+function openEdit(pid) {
+  const p=places.find(x=>x.placeId===pid);
+  if(!p)return;
+  document.getElementById('edit-pid').value      = pid;
+  document.getElementById('edit-name').value     = p.name;
+  document.getElementById('edit-state').value    = p.state;
+  document.getElementById('edit-category').value = p.category;
+  document.getElementById('edit-emoji').value    = p.emoji||'📍';
+  document.getElementById('edit-bestTime').value = p.bestTime||'';
+  document.getElementById('edit-difficulty').value=p.difficulty||'Easy';
+  document.getElementById('edit-city').value     = p.nearestCity||'';
+  document.getElementById('edit-fee').value      = p.entryFee||'';
+  document.getElementById('edit-desc').value     = p.desc||'';
+  document.getElementById('edit-history').value  = p.history||'';
+  document.getElementById('edit-img').value      = p.img||'';
+  document.getElementById('edit-lat').value      = p.lat||'';
+  document.getElementById('edit-lng').value      = p.lng||'';
+  document.getElementById('edit-featured').value = p.featured?'true':'false';
+  const box=document.getElementById('edit-prev');
+  box.innerHTML=p.img?`<img src="${e_(p.img)}" onerror="this.parentElement.innerHTML='<span>Cannot load</span>'">`:'<span>Image preview</span>';
+  openModal('editModal');
+}
+
+function prevEditImg(){
+  const url=document.getElementById('edit-img').value.trim();
+  const box=document.getElementById('edit-prev');
+  box.innerHTML=url?`<img src="${e_(url)}" onerror="this.parentElement.innerHTML='<span>Cannot load</span>'">`:'<span>Image preview</span>';
+}
+
+async function saveEdit(){
+  const pid =+document.getElementById('edit-pid').value;
+  const body={
+    name:       document.getElementById('edit-name').value.trim(),
+    state:      document.getElementById('edit-state').value,
+    category:   document.getElementById('edit-category').value,
+    emoji:      document.getElementById('edit-emoji').value.trim()||'📍',
+    bestTime:   document.getElementById('edit-bestTime').value.trim(),
+    history:    document.getElementById('edit-history').value.trim(),
+    difficulty: document.getElementById('edit-difficulty').value,
+    nearestCity:document.getElementById('edit-city').value.trim(),
+    entryFee:   document.getElementById('edit-fee').value.trim(),
+    desc:       document.getElementById('edit-desc').value.trim(),
+    img:        document.getElementById('edit-img').value.trim(),
+    lat:        +document.getElementById('edit-lat').value||0,
+    lng:        +document.getElementById('edit-lng').value||0,
+    featured:   document.getElementById('edit-featured').value==='true',
+  };
+  if(!body.name||!body.state||!body.category){toast('Name, State, Category required','err');return;}
+  const d=await api(`/api/admin/places/${pid}`,{method:'PUT',body:JSON.stringify(body)});
+  if(d?.success){
+    const idx=places.findIndex(p=>p.placeId===pid);
+    if(idx!==-1)places[idx]={...places[idx],...body};
+    closeModal('editModal');renderPlaceTbl();renderImgTbl();updateNoImgBadge();populateFilters();loadStats();
+    toast(`✅ "${body.name}" updated!`,'ok');
+  } else toast('Error: '+(d?.error||'unknown'),'err');
+}
+
+/* ── HOTELS ─────────────────────────────────────────────── */
+function renderHotelTbl(){
+  const q  =(document.getElementById('htQ')?.value||'').toLowerCase();
+  const pid=document.getElementById('htPlace')?.value||'';
+  const tp =document.getElementById('htType')?.value||'';
+  const fh =hotels.filter(h=>
+    (!q||h.name.toLowerCase().includes(q)||placeName(h.placeId).toLowerCase().includes(q))&&
+    (!pid||+h.placeId===+pid)&&(!tp||h.type===tp)
+  );
+  const e=document.getElementById('htEmpty');
+  const tb=document.getElementById('htTbody');
+  if(!fh.length){tb.innerHTML='';e.style.display='block';return;}
+  e.style.display='none';
+  tb.innerHTML=fh.map(h=>`
+    <tr>
+      <td>${h.img?`<img class="thumb" src="${e_(h.img)}" loading="lazy" onerror="this.style.display='none'">`:`<div class="no-thumb">🏨</div>`}</td>
+      <td><div class="place-name">${e_(h.name)}</div><div class="place-sub">${e_(h.address||'')}</div></td>
+      <td style="font-size:.78rem">${e_(placeName(h.placeId))}</td>
+      <td><span class="badge badge-info">${e_(h.type||'Hotel')}</span></td>
+      <td><span class="stars">${'⭐'.repeat(h.stars||3)}</span></td>
+      <td style="font-weight:600;color:var(--success)">${e_(h.pricePerNight||'—')}</td>
+      <td>
+        <div class="action-group">
+          <button class="btn btn-sm btn-outline" onclick="openEditHotel('${h._id}')">✏️</button>
+          <button class="btn btn-sm btn-danger" onclick="delHotel('${h._id}','${e_(h.name).replace(/'/g,"\\'")}')">🗑️</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function openHotelModal(id=''){
+  clearHotelForm();
+  document.getElementById('ht-id').value='';
+  document.getElementById('hotelModalTitle').textContent='🏨 Add Hotel';
+  openModal('hotelModal');
+}
+
+function openEditHotel(id){
+  const h=hotels.find(x=>x._id===id);
+  if(!h)return;
+  document.getElementById('ht-id').value       = h._id;
+  document.getElementById('ht-name').value     = h.name||'';
+  document.getElementById('ht-placeId').value  = h.placeId||'';
+  document.getElementById('ht-type').value     = h.type||'Hotel';
+  document.getElementById('ht-stars').value    = h.stars||3;
+  document.getElementById('ht-price').value    = h.pricePerNight||'';
+  document.getElementById('ht-phone').value    = h.phone||'';
+  document.getElementById('ht-address').value  = h.address||'';
+  document.getElementById('ht-website').value  = h.website||'';
+  document.getElementById('ht-map').value      = h.mapLink||'';
+  document.getElementById('ht-amenities').value= (h.amenities||[]).join(', ');
+  document.getElementById('ht-img').value      = h.img||'';
+  const box=document.getElementById('ht-prev');
+  box.innerHTML=h.img?`<img src="${e_(h.img)}" onerror="this.parentElement.innerHTML='<span>Cannot load</span>'">`:'<span>📸 Hotel image preview</span>';
+  document.getElementById('hotelModalTitle').textContent='✏️ Edit Hotel';
+  openModal('hotelModal');
+}
+
+function clearHotelForm(){
+  ['ht-name','ht-price','ht-phone','ht-address','ht-website','ht-map','ht-amenities','ht-img'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  document.getElementById('ht-placeId').value='';
+  document.getElementById('ht-type').value='Hotel';
+  document.getElementById('ht-stars').value=4;
+  document.getElementById('ht-prev').innerHTML='<span>📸 Hotel image preview</span>';
+}
+
+function prevHotelImg(){
+  const url=document.getElementById('ht-img').value.trim();
+  const box=document.getElementById('ht-prev');
+  box.innerHTML=url?`<img src="${e_(url)}" onerror="this.parentElement.innerHTML='<span>Cannot load</span>'">`:'<span>📸 Hotel image preview</span>';
+}
+
+async function saveHotel(){
+  const name=document.getElementById('ht-name').value.trim();
+  const pid =document.getElementById('ht-placeId').value;
+  if(!name||!pid){toast('Hotel Name and Place required','err');return;}
+  const body={
+    name, placeId:+pid,
+    type:         document.getElementById('ht-type').value,
+    stars:        +document.getElementById('ht-stars').value,
+    pricePerNight:document.getElementById('ht-price').value.trim(),
+    phone:        document.getElementById('ht-phone').value.trim(),
+    address:      document.getElementById('ht-address').value.trim(),
+    website:      document.getElementById('ht-website').value.trim(),
+    mapLink:      document.getElementById('ht-map').value.trim(),
+    amenities:    document.getElementById('ht-amenities').value.split(',').map(s=>s.trim()).filter(Boolean),
+    img:          document.getElementById('ht-img').value.trim(),
+  };
+  const hId=document.getElementById('ht-id').value;
+  let d;
+  if(hId) d=await api(`/api/admin/hotels/${hId}`,{method:'PUT',body:JSON.stringify(body)});
+  else    d=await api('/api/admin/hotels',{method:'POST',body:JSON.stringify(body)});
+  if(d?.success){
+    if(hId){const idx=hotels.findIndex(h=>h._id===hId);if(idx!==-1)hotels[idx]={...hotels[idx],...body};}
+    else hotels.push(d.hotel);
+    closeModal('hotelModal');renderHotelTbl();loadStats();
+    toast(`✅ Hotel "${name}" saved!`,'ok');
+  } else toast('Error: '+(d?.error||'unknown'),'err');
+}
+
+async function delHotel(id, name){
+  if(!confirm(`Delete hotel "${name}"?`))return;
+  const d=await api(`/api/admin/hotels/${id}`,{method:'DELETE'});
+  if(d?.success){hotels=hotels.filter(h=>h._id!==id);renderHotelTbl();loadStats();toast(`🗑️ "${name}" deleted`,'ok');}
+  else toast('Failed','err');
+}
+
+/* ── RESTAURANTS ────────────────────────────────────────── */
+function renderRestTbl(){
+  const q  =(document.getElementById('rstQ')?.value||'').toLowerCase();
+  const pid=document.getElementById('rstPlace')?.value||'';
+  const pr =document.getElementById('rstPrice')?.value||'';
+  const fr =restaurants.filter(r=>
+    (!q||r.name.toLowerCase().includes(q)||placeName(r.placeId).toLowerCase().includes(q))&&
+    (!pid||+r.placeId===+pid)&&(!pr||r.priceRange===pr)
+  );
+  const e=document.getElementById('rstEmpty');
+  const tb=document.getElementById('rstTbody');
+  if(!fr.length){tb.innerHTML='';e.style.display='block';return;}
+  e.style.display='none';
+  tb.innerHTML=fr.map(r=>`
+    <tr>
+      <td>${r.img?`<img class="thumb" src="${e_(r.img)}" loading="lazy" onerror="this.style.display='none'">`:`<div class="no-thumb">🍽️</div>`}</td>
+      <td><div class="place-name">${e_(r.name)}</div><div class="place-sub">${e_(r.timing||r.address||'')}</div></td>
+      <td style="font-size:.78rem">${e_(placeName(r.placeId))}</td>
+      <td><span class="badge badge-cat">${e_(r.cuisine||'Multi-Cuisine')}</span></td>
+      <td style="font-weight:700;color:var(--forest)">${e_(r.priceRange||'₹₹')}</td>
+      <td><span class="stars">${'⭐'.repeat(r.rating||3)}</span></td>
+      <td style="font-size:.8rem;color:var(--txt-mid)">${e_(r.specialty||'—')}</td>
+      <td>
+        <div class="action-group">
+          <button class="btn btn-sm btn-outline" onclick="openEditRest('${r._id}')">✏️</button>
+          <button class="btn btn-sm btn-danger" onclick="delRest('${r._id}','${e_(r.name).replace(/'/g,"\\'")}')">🗑️</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function openRestModal(){clearRestForm();document.getElementById('rst-id').value='';document.getElementById('restModalTitle').textContent='🍽️ Add Restaurant';openModal('restModal');}
+
+function openEditRest(id){
+  const r=restaurants.find(x=>x._id===id);if(!r)return;
+  document.getElementById('rst-id').value         = r._id;
+  document.getElementById('rst-name').value       = r.name||'';
+  document.getElementById('rst-placeId').value    = r.placeId||'';
+  document.getElementById('rst-cuisine').value    = r.cuisine||'';
+  document.getElementById('rst-priceRange').value = r.priceRange||'₹₹';
+  document.getElementById('rst-rating').value     = r.rating||3;
+  document.getElementById('rst-phone').value      = r.phone||'';
+  document.getElementById('rst-address').value    = r.address||'';
+  document.getElementById('rst-specialty').value  = r.specialty||'';
+  document.getElementById('rst-timing').value     = r.timing||'';
+  document.getElementById('rst-website').value    = r.website||'';
+  document.getElementById('rst-map').value        = r.mapLink||'';
+  document.getElementById('rst-img').value        = r.img||'';
+  const box=document.getElementById('rst-prev');
+  box.innerHTML=r.img?`<img src="${e_(r.img)}" onerror="this.parentElement.innerHTML='<span>Cannot load</span>'">`:'<span>📸 Restaurant image preview</span>';
+  document.getElementById('restModalTitle').textContent='✏️ Edit Restaurant';
+  openModal('restModal');
+}
+
+function clearRestForm(){
+  ['rst-name','rst-cuisine','rst-phone','rst-address','rst-specialty','rst-timing','rst-website','rst-map','rst-img'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  document.getElementById('rst-placeId').value='';
+  document.getElementById('rst-priceRange').value='₹₹';
+  document.getElementById('rst-rating').value=4;
+  document.getElementById('rst-prev').innerHTML='<span>📸 Restaurant image preview</span>';
+}
+
+function prevRestImg(){
+  const url=document.getElementById('rst-img').value.trim();
+  const box=document.getElementById('rst-prev');
+  box.innerHTML=url?`<img src="${e_(url)}" onerror="this.parentElement.innerHTML='<span>Cannot load</span>'">`:'<span>📸 Restaurant image preview</span>';
+}
+
+async function saveRestaurant(){
+  const name=document.getElementById('rst-name').value.trim();
+  const pid =document.getElementById('rst-placeId').value;
+  if(!name||!pid){toast('Restaurant Name and Place required','err');return;}
+  const body={
+    name,placeId:+pid,
+    cuisine:    document.getElementById('rst-cuisine').value.trim(),
+    priceRange: document.getElementById('rst-priceRange').value,
+    rating:     +document.getElementById('rst-rating').value,
+    phone:      document.getElementById('rst-phone').value.trim(),
+    address:    document.getElementById('rst-address').value.trim(),
+    website:    document.getElementById('rst-website').value.trim(),
+    specialty:  document.getElementById('rst-specialty').value.trim(),
+    timing:     document.getElementById('rst-timing').value.trim(),
+    mapLink:    document.getElementById('rst-map').value.trim(),
+    img:        document.getElementById('rst-img').value.trim(),
+  };
+  const rId=document.getElementById('rst-id').value;
+  let d;
+  if(rId) d=await api(`/api/admin/restaurants/${rId}`,{method:'PUT',body:JSON.stringify(body)});
+  else    d=await api('/api/admin/restaurants',{method:'POST',body:JSON.stringify(body)});
+  if(d?.success){
+    if(rId){const idx=restaurants.findIndex(r=>r._id===rId);if(idx!==-1)restaurants[idx]={...restaurants[idx],...body};}
+    else restaurants.push(d.restaurant);
+    closeModal('restModal');renderRestTbl();loadStats();
+    toast(`✅ "${name}" saved!`,'ok');
+  } else toast('Error: '+(d?.error||'unknown'),'err');
+}
+
+async function delRest(id,name){
+  if(!confirm(`Delete restaurant "${name}"?`))return;
+  const d=await api(`/api/admin/restaurants/${id}`,{method:'DELETE'});
+  if(d?.success){restaurants=restaurants.filter(r=>r._id!==id);renderRestTbl();loadStats();toast(`🗑️ "${name}" deleted`,'ok');}
+  else toast('Failed','err');
+}
+
+/* ── BUDGETS ────────────────────────────────────────────── */
+function renderBudgetTbl(){
+  const pid=document.getElementById('bgPlace')?.value||'';
+  const fb=budgets.filter(b=>!pid||+b.placeId===+pid);
+  const e=document.getElementById('bgEmpty');
+  const tb=document.getElementById('bgTbody');
+  if(!fb.length){tb.innerHTML='';e.style.display='block';return;}
+  e.style.display='none';
+  tb.innerHTML=fb.map(b=>`
+    <tr>
+      <td><div class="place-name">${e_(placeName(b.placeId))}</div></td>
+      <td style="color:var(--success);font-weight:700">₹${b.budgetMin||'?'}/day</td>
+      <td style="color:var(--warn);font-weight:700">₹${b.budgetMid||'?'}/day</td>
+      <td style="color:var(--danger);font-weight:700">₹${b.budgetLux||'?'}/day</td>
+      <td><span class="badge badge-info">${b.idealDays||'—'} days</span></td>
+      <td style="font-size:.78rem;color:var(--txt-mid)">${e_(b.hotel||'—')}</td>
+      <td>
+        <div class="action-group">
+          <button class="btn btn-sm btn-outline" onclick="openEditBudget('${b._id}')">✏️</button>
+          <button class="btn btn-sm btn-danger" onclick="delBudget('${b._id}','${e_(placeName(b.placeId)).replace(/'/g,"\\'")}')">🗑️</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function openBudgetModal(){clearBudgetForm();document.getElementById('bg-id').value='';document.getElementById('budgetModalTitle').textContent='💰 Add Budget Guide';openModal('budgetModal');}
+
+function openEditBudget(id){
+  const b=budgets.find(x=>x._id===id);if(!b)return;
+  document.getElementById('bg-id').value        = b._id;
+  document.getElementById('bg-placeId').value   = b.placeId||'';
+  document.getElementById('bg-min').value       = b.budgetMin||'';
+  document.getElementById('bg-mid').value       = b.budgetMid||'';
+  document.getElementById('bg-lux').value       = b.budgetLux||'';
+  document.getElementById('bg-days').value      = b.idealDays||'';
+  document.getElementById('bg-hotel').value     = b.hotel||'';
+  document.getElementById('bg-food').value      = b.food||'';
+  document.getElementById('bg-transport').value = b.transport||'';
+  document.getElementById('bg-notes').value     = b.notes||'';
+  document.getElementById('budgetModalTitle').textContent='✏️ Edit Budget Guide';
+  openModal('budgetModal');
+}
+
+function clearBudgetForm(){
+  ['bg-min','bg-mid','bg-lux','bg-days','bg-hotel','bg-food','bg-transport','bg-notes'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  document.getElementById('bg-placeId').value='';
+}
+
+async function saveBudget(){
+  const pid=document.getElementById('bg-placeId').value;
+  if(!pid){toast('Select a destination','err');return;}
+  const body={
+    placeId:   +pid,
+    budgetMin: +document.getElementById('bg-min').value||0,
+    budgetMid: +document.getElementById('bg-mid').value||0,
+    budgetLux: +document.getElementById('bg-lux').value||0,
+    idealDays: +document.getElementById('bg-days').value||2,
+    hotel:     document.getElementById('bg-hotel').value.trim(),
+    food:      document.getElementById('bg-food').value.trim(),
+    transport: document.getElementById('bg-transport').value.trim(),
+    notes:     document.getElementById('bg-notes').value.trim(),
+  };
+  const bId=document.getElementById('bg-id').value;
+  let d;
+  if(bId) d=await api(`/api/admin/budgets/${bId}`,{method:'PUT',body:JSON.stringify(body)});
+  else    d=await api('/api/admin/budgets',{method:'POST',body:JSON.stringify(body)});
+  if(d?.success){
+    if(bId){const idx=budgets.findIndex(b=>b._id===bId);if(idx!==-1)budgets[idx]={...budgets[idx],...body};}
+    else {budgets=budgets.filter(b=>b.placeId!==+pid);budgets.push(d.budget);}
+    closeModal('budgetModal');renderBudgetTbl();loadStats();
+    toast(`✅ Budget guide saved!`,'ok');
+  } else toast('Error: '+(d?.error||'unknown'),'err');
+}
+
+async function delBudget(id,name){
+  if(!confirm(`Remove budget guide for "${name}"?`))return;
+  const d=await api(`/api/admin/budgets/${id}`,{method:'DELETE'});
+  if(d?.success){budgets=budgets.filter(b=>b._id!==id);renderBudgetTbl();loadStats();toast('🗑️ Budget removed','ok');}
+  else toast('Failed','err');
+}
+
+/* ── TIPS ───────────────────────────────────────────────── */
+function renderTipTbl(){
+  const q  =(document.getElementById('tipQ')?.value||'').toLowerCase();
+  const pid=document.getElementById('tipPlace')?.value||'';
+  const cat=document.getElementById('tipCat')?.value||'';
+  const ft =tips.filter(t=>
+    (!q||t.tip.toLowerCase().includes(q)||placeName(t.placeId).toLowerCase().includes(q))&&
+    (!pid||+t.placeId===+pid)&&(!cat||t.category===cat)
+  );
+  const e=document.getElementById('tipEmpty');
+  const tb=document.getElementById('tipTbody');
+  if(!ft.length){tb.innerHTML='';e.style.display='block';return;}
+  e.style.display='none';
+  const priLabel={1:'ℹ️ Info',2:'⚠️ Important',3:'🔴 Must-Know'};
+  const priClass={1:'badge-info',2:'badge-warn',3:'badge badge-warn'};
+  tb.innerHTML=ft.map(t=>`
+    <tr>
+      <td style="font-size:.78rem;font-weight:600">${e_(placeName(t.placeId))}</td>
+      <td><span class="badge badge-cat">${e_(t.category||'General')}</span></td>
+      <td><span class="badge ${priClass[t.priority]||'badge-info'}">${priLabel[t.priority]||'ℹ️'}</span></td>
+      <td style="font-size:.83rem;max-width:320px">${e_(t.tip)}</td>
+      <td>
+        <div class="action-group">
+          <button class="btn btn-sm btn-outline" onclick="openEditTip('${t._id}')">✏️</button>
+          <button class="btn btn-sm btn-danger" onclick="delTip('${t._id}')">🗑️</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function openTipModal(){clearTipForm();document.getElementById('tip-id').value='';document.getElementById('tipModalTitle').textContent='💡 Add Travel Tip';openModal('tipModal');}
+
+function openEditTip(id){
+  const t=tips.find(x=>x._id===id);if(!t)return;
+  document.getElementById('tip-id').value       = t._id;
+  document.getElementById('tip-placeId').value  = t.placeId||'';
+  document.getElementById('tip-category').value = t.category||'General';
+  document.getElementById('tip-priority').value = t.priority||1;
+  document.getElementById('tip-text').value     = t.tip||'';
+  document.getElementById('tipModalTitle').textContent='✏️ Edit Tip';
+  openModal('tipModal');
+}
+
+function clearTipForm(){
+  document.getElementById('tip-placeId').value='';
+  document.getElementById('tip-category').value='General';
+  document.getElementById('tip-priority').value=1;
+  document.getElementById('tip-text').value='';
+}
+
+async function saveTip(){
+  const pid=document.getElementById('tip-placeId').value;
+  const txt=document.getElementById('tip-text').value.trim();
+  if(!pid||!txt){toast('Select place and enter tip text','err');return;}
+  const body={
+    placeId: +pid,
+    category:document.getElementById('tip-category').value,
+    priority:+document.getElementById('tip-priority').value||1,
+    tip:     txt,
+  };
+  const tId=document.getElementById('tip-id').value;
+  let d;
+  if(tId) d=await api(`/api/admin/tips/${tId}`,{method:'PUT',body:JSON.stringify(body)});
+  else    d=await api('/api/admin/tips',{method:'POST',body:JSON.stringify(body)});
+  if(d?.success){
+    if(tId){const idx=tips.findIndex(t=>t._id===tId);if(idx!==-1)tips[idx]={...tips[idx],...body};}
+    else tips.push(d.tip);
+    closeModal('tipModal');renderTipTbl();
+    toast('✅ Tip saved!','ok');
+  } else toast('Error: '+(d?.error||'unknown'),'err');
+}
+
+async function delTip(id){
+  if(!confirm('Delete this tip?'))return;
+  const d=await api(`/api/admin/tips/${id}`,{method:'DELETE'});
+  if(d?.success){tips=tips.filter(t=>t._id!==id);renderTipTbl();toast('🗑️ Tip deleted','ok');}
+  else toast('Failed','err');
+}
+
+/* ── MODALS ─────────────────────────────────────────────── */
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+document.querySelectorAll('.modal-overlay').forEach(o=>{
+  o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});
+});
+
+/* ── HELPERS ────────────────────────────────────────────── */
+function placeName(pid){
+  const p=places.find(x=>x.placeId===+pid);
+  return p?p.name:'Unknown';
+}
+
+function e_(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
+/* ── TOAST ──────────────────────────────────────────────── */
+let toastTimer;
+function toast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast '+type;t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),3200);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Travel Guru — Explore India</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/style.css"/>
+</head>
+<body>
+
+<!-- ── NAVBAR ── -->
+<nav class="navbar" id="navbar">
+  <div class="nav-inner">
+    <a href="#" class="brand" onclick="showPage('home')">
+      <span class="brand-icon">🧭</span>
+      <span>Travel<em>Guru</em></span>
+    </a>
+    <div class="nav-links" id="navLinks">
+      <a onclick="showPage('home')" class="nav-a active" data-page="home">🏠 Home</a>
+      <a onclick="showPage('explore')" class="nav-a" data-page="explore">🗺️ Explore</a>
+      <a onclick="showPage('states')" class="nav-a" data-page="states">🇮🇳 States</a>
+      <a onclick="showPage('wishlist')" class="nav-a" data-page="wishlist">❤️ Wishlist</a>
+      <a onclick="showPage('trips')" class="nav-a" data-page="trips">🗓️ My Trips</a>
+    </div>
+    <div class="nav-right">
+      <div id="userArea"></div>
+      <button class="hamburger" onclick="toggleMenu()" id="hamburger">☰</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ── HOME PAGE ── -->
+<div id="page-home" class="page active">
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bg" id="heroBg"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <p class="hero-eyebrow">✨ India's #1 Travel Community</p>
+      <h1 class="hero-title">Discover the <em>Magic</em><br>of Incredible India</h1>
+      <p class="hero-sub">500+ destinations across 29 states • Real images • Honest reviews</p>
+      <div class="hero-search">
+        <input type="text" id="heroSearch" placeholder="Search places, states, categories..." oninput="heroSearchFn()"/>
+        <button onclick="doHeroSearch()">🔍 Search</button>
+      </div>
+      <div id="heroSuggestions" class="hero-suggestions"></div>
+      <div class="hero-stats">
+        <div class="hstat"><span id="statPlaces">500+</span><small>Destinations</small></div>
+        <div class="hstat"><span>29</span><small>States</small></div>
+        <div class="hstat"><span id="statUsers">1K+</span><small>Travelers</small></div>
+      </div>
+    </div>
+    <div class="hero-scroll" onclick="scrollToFeatured()">↓ Explore</div>
+  </section>
+
+  <!-- CATEGORY FILTER -->
+  <section class="section" id="featuredSection">
+    <div class="container">
+      <div class="sec-header">
+        <h2>Featured Destinations</h2>
+        <p>Hand-picked places across India</p>
+      </div>
+      <div class="cat-pills" id="catPills"></div>
+      <div class="places-grid" id="featuredGrid">
+        <div class="loading-spinner">Loading places…</div>
+      </div>
+      <div class="text-center mt-3">
+        <button class="btn-primary" onclick="showPage('explore')">View All Destinations →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATES SHOWCASE -->
+  <section class="section bg-light">
+    <div class="container">
+      <div class="sec-header">
+        <h2>Browse by State</h2>
+        <p>Every corner of incredible India</p>
+      </div>
+      <div class="states-showcase" id="statesShowcase"></div>
+    </div>
+  </section>
+
+  <!-- WHY TRAVELGURU -->
+  <section class="section">
+    <div class="container">
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feat-icon">📸</div>
+          <h3>Real Photos Only</h3>
+          <p>Every image is a verified real photograph from Wikimedia Commons — no stock photos or AI art.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feat-icon">💰</div>
+          <h3>Budget Planner</h3>
+          <p>Know the exact cost for budget, mid-range, and luxury trips before you leave home.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feat-icon">🏨</div>
+          <h3>Hotels & Restaurants</h3>
+          <p>Curated stays and dining options near every destination with honest details.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feat-icon">💬</div>
+          <h3>Travel Community</h3>
+          <p>Chat with fellow travelers going to the same place on the same date. Plan together!</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ── EXPLORE PAGE ── -->
+<div id="page-explore" class="page">
+  <div class="container" style="padding-top:90px">
+    <div class="explore-header">
+      <h1>Explore India</h1>
+      <p>Discover all <span id="totalCount">500+</span> destinations</p>
+    </div>
+    <div class="explore-filters">
+      <input type="text" id="exploreSearch" placeholder="🔍 Search places..." oninput="filterPlaces()"/>
+      <select id="filterState" onchange="onStateFilterChange()"><option value="">All States</option></select>
+      <select id="filterCity" onchange="filterPlaces()"><option value="">All Cities</option></select>
+      <select id="filterCat" onchange="filterPlaces()"><option value="">All Categories</option></select>
+      <button class="btn-outline" onclick="clearFilters()">✕ Clear</button>
+    </div>
+    <div class="results-info" id="resultsInfo"></div>
+    <div class="places-grid" id="exploreGrid">
+      <div class="loading-spinner">Loading destinations…</div>
+    </div>
+    <div id="loadMoreWrap" class="text-center mt-3" style="display:none">
+      <button class="btn-outline" onclick="loadMore()">Load More</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── STATES PAGE ── -->
+<div id="page-states" class="page">
+  <div class="container" style="padding-top:90px">
+    <div class="explore-header">
+      <h1>All States of India</h1>
+      <p>29 states with hundreds of destinations</p>
+    </div>
+    <div class="states-list" id="statesList"></div>
+  </div>
+</div>
+
+<!-- ── WISHLIST PAGE ── -->
+<div id="page-wishlist" class="page">
+  <div class="container" style="padding-top:90px">
+    <div class="explore-header">
+      <h1>❤️ My Wishlist</h1>
+      <p>Places you want to visit</p>
+    </div>
+    <div id="wishlistContent"></div>
+  </div>
+</div>
+
+<!-- ── TRIPS PAGE ── -->
+<div id="page-trips" class="page">
+  <div class="container" style="padding-top:90px">
+    <div class="explore-header">
+      <h1>🗓️ My Trips</h1>
+      <p>Your planned adventures</p>
+    </div>
+    <div id="tripsContent"></div>
+  </div>
+</div>
+
+<!-- ── PLACE DETAIL MODAL ── -->
+<div id="placeModal" class="modal-overlay" onclick="closeModal(event)">
+  <div class="modal-box" id="modalBox">
+    <button class="modal-close" onclick="closeModalBtn()">✕</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<!-- ── AUTH MODAL ── -->
+<div id="authModal" class="modal-overlay" onclick="closeAuthModal(event)">
+  <div class="auth-box">
+    <button class="modal-close" onclick="document.getElementById('authModal').style.display='none'">✕</button>
+    <div class="auth-tabs">
+      <button onclick="switchAuth('login')" id="tab-login" class="auth-tab active">Login</button>
+      <button onclick="switchAuth('register')" id="tab-register" class="auth-tab">Register</button>
+    </div>
+    <div id="auth-login" class="auth-form">
+      <h3>Welcome Back!</h3>
+      <input type="email" id="loginEmail" placeholder="Email" class="form-input"/>
+      <input type="password" id="loginPass" placeholder="Password" class="form-input"/>
+      <div id="loginErr" class="form-err"></div>
+      <button class="btn-primary w-full" onclick="doLogin()">Login</button>
+    </div>
+    <div id="auth-register" class="auth-form" style="display:none">
+      <h3>Join Travel Guru</h3>
+      <input type="text" id="regName" placeholder="Full Name" class="form-input"/>
+      <input type="email" id="regEmail" placeholder="Email" class="form-input"/>
+      <input type="password" id="regPass" placeholder="Password (min 6 chars)" class="form-input"/>
+      <select id="regState" class="form-input"><option value="">Home State (optional)</option></select>
+      <div id="regErr" class="form-err"></div>
+      <button class="btn-primary w-full" onclick="doRegister()">Create Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div id="toast" class="toast"></div>
+
+<script src="/app.js"></script>
+</body>
+</html>
