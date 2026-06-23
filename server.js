@@ -162,22 +162,73 @@ function isMissingImg(img) {
   return !img || img.includes(PLACEHOLDER_IMG);
 }
 
-// Find a real photo for a place via Wikipedia (search → pageimages thumbnail)
+// Find a real photo for a place via Wikipedia (prefer) or Wikimedia Commons as fallback.
 async function fetchWikiImage(name, state) {
   try {
-    const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(name + ' ' + (state || ''))}&format=json&srlimit=1`;
+    const query = `${name} ${state || ''}`.trim();
+    // 1) Try English Wikipedia pageimages (gives a reasonably sized thumbnail)
+    const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&srlimit=1`;
     const sRes = await fetch(searchUrl, { headers: { 'User-Agent': UA } });
     const sData = await sRes.json();
     const title = sData?.query?.search?.[0]?.title;
+    if (title) {
+      const imgUrl = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=pageimages&format=json&pithumbsize=2000`;
+      const iRes = await fetch(imgUrl, { headers: { 'User-Agent': UA } });
+      const iData = await iRes.json();
+      const pages = iData?.query?.pages || {};
+      const page = Object.values(pages)[0];
+      const thumb = page?.thumbnail?.source;
+      if (thumb) return thumb;
+    }
+    // 2) Fallback: search Wikimedia Commons (file namespace) for an image file
+    const commonsImg = await fetchCommonsImage(name, state);
+    if (commonsImg) return commonsImg;
+    // 3) Optional: Google Custom Search Image (if API key + cx provided)
+    const googleImg = await fetchGoogleImage(name, state);
+    if (googleImg) return googleImg;
+    return null;
+  } catch (e) {
+    console.error('fetchWikiImage error:', e.message);
+    return null;
+  }
+}
+
+// Search Wikimedia Commons for an image file matching the place name and return its direct image URL.
+async function fetchCommonsImage(name, state) {
+  try {
+    const query = `${name} ${state || ''}`.trim();
+    const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srnamespace=6&format=json&srlimit=1`;
+    const sRes = await fetch(searchUrl, { headers: { 'User-Agent': UA } });
+    const sData = await sRes.json();
+    const title = sData?.query?.search?.[0]?.title; // e.g. "File:Something.jpg"
     if (!title) return null;
-    const imgUrl = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=pageimages&format=json&pithumbsize=1000`;
-    const iRes = await fetch(imgUrl, { headers: { 'User-Agent': UA } });
+    const imgInfoUrl = `https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=imageinfo&iiprop=url&format=json`;
+    const iRes = await fetch(imgInfoUrl, { headers: { 'User-Agent': UA } });
     const iData = await iRes.json();
     const pages = iData?.query?.pages || {};
     const page = Object.values(pages)[0];
-    return page?.thumbnail?.source || null;
+    const url = page?.imageinfo?.[0]?.url;
+    return url || null;
   } catch (e) {
-    console.error('fetchWikiImage error:', e.message);
+    console.error('fetchCommonsImage error:', e.message);
+    return null;
+  }
+}
+
+// Optional: Google Custom Search (Image) fallback when API key and CX are provided in env.
+async function fetchGoogleImage(name, state) {
+  try {
+    const key = process.env.GOOGLE_API_KEY;
+    const cx  = process.env.GOOGLE_CX;
+    if (!key || !cx) return null;
+    const query = `${name} ${state || ''}`.trim();
+    const url = `https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(key)}&cx=${encodeURIComponent(cx)}&q=${encodeURIComponent(query)}&searchType=image&num=1`;
+    const res = await fetch(url, { headers: { 'User-Agent': UA } });
+    const data = await res.json();
+    const link = data?.items?.[0]?.link;
+    return link || null;
+  } catch (e) {
+    console.error('fetchGoogleImage error:', e.message);
     return null;
   }
 }
