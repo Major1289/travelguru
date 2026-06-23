@@ -21,6 +21,8 @@
       <a onclick="showPage('home')" class="nav-a active" data-page="home">🏠 Home</a>
       <a onclick="showPage('explore')" class="nav-a" data-page="explore">🗺️ Explore</a>
       <a onclick="showPage('states')" class="nav-a" data-page="states">🇮🇳 States</a>
+      <a onclick="showPage('hotels')" class="nav-a" data-page="hotels">🏨 Hotels</a>
+      <a onclick="showPage('restaurants')" class="nav-a" data-page="restaurants">🍽️ Restaurants</a>
       <a onclick="showPage('wishlist')" class="nav-a" data-page="wishlist">❤️ Wishlist</a>
       <a onclick="showPage('trips')" class="nav-a" data-page="trips">🗓️ My Trips</a>
     </div>
@@ -166,6 +168,54 @@
       <p>Your planned adventures</p>
     </div>
     <div id="tripsContent"></div>
+  </div>
+</div>
+
+<!-- ── HOTELS PAGE ── -->
+<div id="page-hotels" class="page">
+  <div class="container" style="padding-top:90px">
+    <div class="explore-header">
+      <h1>🏨 Hotels Across India</h1>
+      <p>Find and book premium stays</p>
+    </div>
+    <div class="explore-filters">
+      <input type="text" id="hotelSearch" placeholder="🔍 Search hotels by name..." oninput="filterHotels()"/>
+      <select id="hotelState" onchange="onHotelStateChange()"><option value="">All States</option></select>
+      <select id="hotelCity" onchange="filterHotels()"><option value="">All Cities</option></select>
+      <select id="hotelStars" onchange="filterHotels()"><option value="">All Star Ratings</option><option value="5">⭐⭐⭐⭐⭐ 5 Stars</option><option value="4">⭐⭐⭐⭐ 4 Stars</option><option value="3">⭐⭐⭐ 3 Stars</option><option value="2">⭐⭐ 2 Stars</option></select>
+      <button class="btn-outline" onclick="clearHotelFilters()">✕ Clear</button>
+    </div>
+    <div class="results-info" id="hotelsInfo"></div>
+    <div class="places-grid" id="hotelsGrid">
+      <div class="loading-spinner">Loading hotels…</div>
+    </div>
+    <div id="hotelsLoadMoreWrap" class="text-center mt-3" style="display:none">
+      <button class="btn-outline" onclick="loadMoreHotels()">Load More</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── RESTAURANTS PAGE ── -->
+<div id="page-restaurants" class="page">
+  <div class="container" style="padding-top:90px">
+    <div class="explore-header">
+      <h1>🍽️ Restaurants Across India</h1>
+      <p>Discover and dine at top restaurants</p>
+    </div>
+    <div class="explore-filters">
+      <input type="text" id="restSearch" placeholder="🔍 Search restaurants by name..." oninput="filterRestaurants()"/>
+      <select id="restState" onchange="onRestStateChange()"><option value="">All States</option></select>
+      <select id="restCity" onchange="filterRestaurants()"><option value="">All Cities</option></select>
+      <select id="restCuisine" onchange="filterRestaurants()"><option value="">All Cuisines</option><option value="Indian">Indian</option><option value="Chinese">Chinese</option><option value="Continental">Continental</option><option value="Cafe">Cafe</option><option value="Multi">Multi-cuisine</option></select>
+      <button class="btn-outline" onclick="clearRestFilters()">✕ Clear</button>
+    </div>
+    <div class="results-info" id="restsInfo"></div>
+    <div class="places-grid" id="restsGrid">
+      <div class="loading-spinner">Loading restaurants…</div>
+    </div>
+    <div id="restsLoadMoreWrap" class="text-center mt-3" style="display:none">
+      <button class="btn-outline" onclick="loadMoreRestaurants()">Load More</button>
+    </div>
   </div>
 </div>
 

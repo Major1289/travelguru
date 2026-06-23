@@ -713,6 +713,56 @@ app.get('/api/restaurants', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+/* ── PUBLIC: ALL HOTELS (browsable across India) ──────────── */
+app.get('/api/all-hotels', async (req, res) => {
+  try {
+    const limit = Math.min(+req.query.limit || 100, 500);
+    const skip = Math.max(0, +req.query.skip || 0);
+    const stateFilter = (req.query.state||'').trim();
+    const cityFilter = (req.query.city||'').trim();
+    const search = (req.query.search||'').trim().toLowerCase();
+    const minStars = req.query.minStars ? +req.query.minStars : 0;
+
+    const query = {};
+    if (stateFilter) query.state = stateFilter;
+    if (cityFilter) query.city = cityFilter;
+    if (minStars > 0) query.stars = { $gte: minStars };
+    if (search) query.$text = { $search: search };
+
+    const total = await Hotel.countDocuments(query);
+    const hotels = await Hotel.find(query)
+      .sort({ stars: -1, name: 1 })
+      .limit(limit).skip(skip);
+    res.json({ total, count: hotels.length, hotels });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+/* ── PUBLIC: ALL RESTAURANTS (browsable across India) ──────── */
+app.get('/api/all-restaurants', async (req, res) => {
+  try {
+    const limit = Math.min(+req.query.limit || 100, 500);
+    const skip = Math.max(0, +req.query.skip || 0);
+    const stateFilter = (req.query.state||'').trim();
+    const cityFilter = (req.query.city||'').trim();
+    const cuisine = (req.query.cuisine||'').trim();
+    const search = (req.query.search||'').trim().toLowerCase();
+    const minRating = req.query.minRating ? +req.query.minRating : 0;
+
+    const query = {};
+    if (stateFilter) query.state = stateFilter;
+    if (cityFilter) query.city = cityFilter;
+    if (cuisine) query.cuisine = new RegExp(cuisine, 'i');
+    if (minRating > 0) query.rating = { $gte: minRating };
+    if (search) query.$text = { $search: search };
+
+    const total = await Restaurant.countDocuments(query);
+    const restaurants = await Restaurant.find(query)
+      .sort({ rating: -1, name: 1 })
+      .limit(limit).skip(skip);
+    res.json({ total, count: restaurants.length, restaurants });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 /* ── ADMIN: BUDGETS ───────────────────────────────────────── */
 app.get('/api/admin/budgets', adminAuth, async (req, res) => {
   try {

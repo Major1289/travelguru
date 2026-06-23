@@ -8,6 +8,8 @@ let wishlist = [], trips = [];
 let currentUser = null, authToken = null;
 let exploreOffset = 0, BATCH = 24;
 let filteredPlaces = [];
+let allHotels = [], filteredHotels = [], hotelOffset = 0;
+let allRestaurants = [], filteredRestaurants = [], restOffset = 0;
 let socket = null;
 let chatRoom = null, chatPlaceId = null;
 
@@ -839,6 +841,8 @@ function showPage(page) {
       <h3>Login to manage trips</h3>
       <button class="btn-primary" style="margin-top:16px" onclick="showAuth()">Login</button></div>`;
   }
+  if (page === 'hotels') loadAllHotels();
+  if (page === 'restaurants') loadAllRestaurants();
 }
 
 function toggleMenu() {
@@ -881,6 +885,218 @@ function formatDate(d) {
 function formatTime(d) {
   if (!d) return '';
   return new Date(d).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+}
+
+/* ── HOTELS BROWSING ─────────────────────────────────────── */
+async function loadAllHotels() {
+  try {
+    const res = await fetch('/api/all-hotels?limit=500');
+    const data = await res.json();
+    allHotels = data.hotels || [];
+    filteredHotels = [...allHotels];
+    populateHotelFilters();
+    renderHotels();
+  } catch (e) { console.error('Load hotels failed:', e); }
+}
+
+function populateHotelFilters() {
+  const stateSelect = document.getElementById('hotelState');
+  const states = [...new Set(allHotels.map(h => h.state).filter(s => s))].sort();
+  states.forEach(s => {
+    if (!stateSelect.querySelector(`option[value="${s}"]`)) {
+      stateSelect.innerHTML += `<option value="${s}">${s}</option>`;
+    }
+  });
+}
+
+function onHotelStateChange() {
+  const state = document.getElementById('hotelState').value;
+  const citySelect = document.getElementById('hotelCity');
+  citySelect.innerHTML = '<option value="">All Cities</option>';
+  if (state) {
+    const cities = [...new Set(allHotels.filter(h => h.state === state).map(h => h.city).filter(c => c))].sort();
+    cities.forEach(c => {
+      citySelect.innerHTML += `<option value="${c}">${c}</option>`;
+    });
+  }
+  filterHotels();
+}
+
+function filterHotels() {
+  const search = (document.getElementById('hotelSearch')?.value || '').toLowerCase();
+  const state = document.getElementById('hotelState')?.value || '';
+  const city = document.getElementById('hotelCity')?.value || '';
+  const stars = document.getElementById('hotelStars')?.value || '';
+
+  filteredHotels = allHotels.filter(h => {
+    const matchSearch = !search || h.name.toLowerCase().includes(search) || (h.specialty || '').toLowerCase().includes(search);
+    const matchState = !state || h.state === state;
+    const matchCity = !city || h.city === city;
+    const matchStars = !stars || h.stars === +stars;
+    return matchSearch && matchState && matchCity && matchStars;
+  });
+  hotelOffset = 0;
+  renderHotels();
+}
+
+function clearHotelFilters() {
+  document.getElementById('hotelSearch').value = '';
+  document.getElementById('hotelState').value = '';
+  document.getElementById('hotelCity').innerHTML = '<option value="">All Cities</option>';
+  document.getElementById('hotelStars').value = '';
+  filterHotels();
+}
+
+function renderHotels() {
+  const grid = document.getElementById('hotelsGrid');
+  const info = document.getElementById('hotelsInfo');
+  info.textContent = `Showing ${Math.min(filteredHotels.length, BATCH)} of ${filteredHotels.length} hotels`;
+  const batch = filteredHotels.slice(0, BATCH);
+  hotelOffset = batch.length;
+  grid.innerHTML = batch.length ? batch.map(h => hotelCardHTML(h)).join('') :
+    '<div class="empty-state"><div class="empty-icon">🏨</div><h3>No hotels found</h3><p>Try different filters</p></div>';
+  document.getElementById('hotelsLoadMoreWrap').style.display = filteredHotels.length > BATCH ? 'block' : 'none';
+}
+
+function loadMoreHotels() {
+  const grid = document.getElementById('hotelsGrid');
+  const next = filteredHotels.slice(hotelOffset, hotelOffset + BATCH);
+  next.forEach(h => { grid.innerHTML += hotelCardHTML(h); });
+  hotelOffset += next.length;
+  document.getElementById('hotelsInfo').textContent = `Showing ${hotelOffset} of ${filteredHotels.length} hotels`;
+  if (hotelOffset >= filteredHotels.length) document.getElementById('hotelsLoadMoreWrap').style.display = 'none';
+}
+
+function hotelCardHTML(h) {
+  const website = safeUrl(h.website);
+  return `<div class="place-card">
+    <div class="card-img-wrap">
+      <img class="card-img" src="https://via.placeholder.com/300x200?text=${encodeURIComponent(h.name)}" alt="${h.name}" loading="lazy" style="object-fit:cover"/>
+      <div class="card-badge">${h.type || 'Hotel'}</div>
+    </div>
+    <div class="card-body">
+      <div class="card-state">${h.state || 'India'}</div>
+      <div class="card-name">${h.name}</div>
+      <div class="card-desc">📍 ${h.city || 'Various'} • ${h.address || ''}</div>
+      <div class="card-meta">
+        <span>⭐ ${h.stars || 0} stars</span>
+        <span>💰 ${h.pricePerNight || 'Contact'}</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="card-fee">${h.pricePerNight || 'Call'}</span>
+      <div class="card-actions">
+        ${website ? `<a href="${website}" target="_blank" rel="noopener"><button class="btn-icon" title="Visit website">🌐</button></a>` : ''}
+        ${h.mapLink ? `<a href="${h.mapLink}" target="_blank" rel="noopener"><button class="btn-icon" title="View location">📍</button></a>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── RESTAURANTS BROWSING ────────────────────────────────── */
+async function loadAllRestaurants() {
+  try {
+    const res = await fetch('/api/all-restaurants?limit=500');
+    const data = await res.json();
+    allRestaurants = data.restaurants || [];
+    filteredRestaurants = [...allRestaurants];
+    populateRestFilters();
+    renderRestaurants();
+  } catch (e) { console.error('Load restaurants failed:', e); }
+}
+
+function populateRestFilters() {
+  const stateSelect = document.getElementById('restState');
+  const states = [...new Set(allRestaurants.map(r => r.state).filter(s => s))].sort();
+  states.forEach(s => {
+    if (!stateSelect.querySelector(`option[value="${s}"]`)) {
+      stateSelect.innerHTML += `<option value="${s}">${s}</option>`;
+    }
+  });
+}
+
+function onRestStateChange() {
+  const state = document.getElementById('restState').value;
+  const citySelect = document.getElementById('restCity');
+  citySelect.innerHTML = '<option value="">All Cities</option>';
+  if (state) {
+    const cities = [...new Set(allRestaurants.filter(r => r.state === state).map(r => r.city).filter(c => c))].sort();
+    cities.forEach(c => {
+      citySelect.innerHTML += `<option value="${c}">${c}</option>`;
+    });
+  }
+  filterRestaurants();
+}
+
+function filterRestaurants() {
+  const search = (document.getElementById('restSearch')?.value || '').toLowerCase();
+  const state = document.getElementById('restState')?.value || '';
+  const city = document.getElementById('restCity')?.value || '';
+  const cuisine = document.getElementById('restCuisine')?.value || '';
+
+  filteredRestaurants = allRestaurants.filter(r => {
+    const matchSearch = !search || r.name.toLowerCase().includes(search) || (r.cuisine || '').toLowerCase().includes(search);
+    const matchState = !state || r.state === state;
+    const matchCity = !city || r.city === city;
+    const matchCuisine = !cuisine || (r.cuisine || '').toLowerCase().includes(cuisine.toLowerCase());
+    return matchSearch && matchState && matchCity && matchCuisine;
+  });
+  restOffset = 0;
+  renderRestaurants();
+}
+
+function clearRestFilters() {
+  document.getElementById('restSearch').value = '';
+  document.getElementById('restState').value = '';
+  document.getElementById('restCity').innerHTML = '<option value="">All Cities</option>';
+  document.getElementById('restCuisine').value = '';
+  filterRestaurants();
+}
+
+function renderRestaurants() {
+  const grid = document.getElementById('restsGrid');
+  const info = document.getElementById('restsInfo');
+  info.textContent = `Showing ${Math.min(filteredRestaurants.length, BATCH)} of ${filteredRestaurants.length} restaurants`;
+  const batch = filteredRestaurants.slice(0, BATCH);
+  restOffset = batch.length;
+  grid.innerHTML = batch.length ? batch.map(r => restaurantCardHTML(r)).join('') :
+    '<div class="empty-state"><div class="empty-icon">🍽️</div><h3>No restaurants found</h3><p>Try different filters</p></div>';
+  document.getElementById('restsLoadMoreWrap').style.display = filteredRestaurants.length > BATCH ? 'block' : 'none';
+}
+
+function loadMoreRestaurants() {
+  const grid = document.getElementById('restsGrid');
+  const next = filteredRestaurants.slice(restOffset, restOffset + BATCH);
+  next.forEach(r => { grid.innerHTML += restaurantCardHTML(r); });
+  restOffset += next.length;
+  document.getElementById('restsInfo').textContent = `Showing ${restOffset} of ${filteredRestaurants.length} restaurants`;
+  if (restOffset >= filteredRestaurants.length) document.getElementById('restsLoadMoreWrap').style.display = 'none';
+}
+
+function restaurantCardHTML(r) {
+  const website = safeUrl(r.website);
+  return `<div class="place-card">
+    <div class="card-img-wrap">
+      <img class="card-img" src="https://via.placeholder.com/300x200?text=${encodeURIComponent(r.name)}" alt="${r.name}" loading="lazy" style="object-fit:cover"/>
+      <div class="card-badge">${r.cuisine || 'Restaurant'}</div>
+    </div>
+    <div class="card-body">
+      <div class="card-state">${r.state || 'India'}</div>
+      <div class="card-name">${r.name}</div>
+      <div class="card-desc">📍 ${r.city || 'Various'} • ${r.address || ''}</div>
+      <div class="card-meta">
+        <span>${'★'.repeat(Math.round(r.rating || 0))}${'☆'.repeat(5-Math.round(r.rating || 0))} ${r.rating || 'N/A'}/5</span>
+        <span>💰 ${r.priceRange || '₹₹'}</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="card-fee">${r.priceRange || 'Contact'}</span>
+      <div class="card-actions">
+        ${website ? `<a href="${website}" target="_blank" rel="noopener"><button class="btn-icon" title="Visit website">🌐</button></a>` : ''}
+        ${r.mapLink ? `<a href="${r.mapLink}" target="_blank" rel="noopener"><button class="btn-icon" title="View location">📍</button></a>` : ''}
+      </div>
+    </div>
+  </div>`;
 }
 
 /* ── QUICK NAVIGATOR (visible UI) ───────────────────────── */
