@@ -428,6 +428,7 @@ async function openPlace(placeId) {
           <button class="modal-tab" onclick="switchTab(this,'tab-hotels')">🏨 Hotels</button>
           <button class="modal-tab" onclick="switchTab(this,'tab-restaurants')">🍽️ Food</button>
           ${tips.length?`<button class="modal-tab" onclick="switchTab(this,'tab-tips')">💡 Tips</button>`:''}
+          <button class="modal-tab" onclick="switchTab(this,'tab-reviews');loadReviews(${placeId})">⭐ Reviews</button>
           <button class="modal-tab" onclick="switchTab(this,'tab-chat');initChat(${placeId})">💬 Chat</button>
         </div>
 
@@ -548,6 +549,30 @@ async function openPlace(placeId) {
               </div>`).join('')}
           </div>
         </div>` : ''}
+
+        <div id="tab-reviews" class="modal-tab-content">
+          <div id="reviewsContainer" style="max-height:400px;overflow-y:auto">
+            <div style="text-align:center;color:#aaa;padding:20px">Loading reviews...</div>
+          </div>
+          ${currentUser?`
+          <div style="margin-top:20px;border-top:1px solid #ddd;padding-top:20px">
+            <h4 style="margin:0 0 12px;color:var(--txt-dark)">Leave a Review</h4>
+            <div style="display:flex;gap:8px;margin-bottom:12px">
+              <label>Rating:</label>
+              <select id="reviewRating" style="flex:1;padding:8px;border:1px solid #ccc;border-radius:4px">
+                <option>Select...</option>
+                <option value="5">⭐⭐⭐⭐⭐ Excellent</option>
+                <option value="4">⭐⭐⭐⭐ Good</option>
+                <option value="3">⭐⭐⭐ Average</option>
+                <option value="2">⭐⭐ Poor</option>
+                <option value="1">⭐ Bad</option>
+              </select>
+            </div>
+            <textarea id="reviewComment" placeholder="Share your experience..." style="width:100%;padding:10px;border:1px solid #ccc;border-radius:4px;resize:vertical;height:80px"></textarea>
+            <button class="btn-primary" style="margin-top:12px;width:100%" onclick="submitReview(${placeId})">Submit Review</button>
+          </div>
+          `:``}
+        </div>
 
         <div id="tab-chat" class="modal-tab-content">
           <div class="chat-box">
@@ -1163,6 +1188,102 @@ function quickNavOpenSelected() {
   const match = allPlaces.find(p => p.state.toLowerCase()===state.toLowerCase() && p.name.toLowerCase().includes(q));
   if (!match) { showToast('No matching place found', 'error'); return; }
   openPlace(match.placeId); hideQuickNavigator();
+}
+
+/* ── PACKING LIST GENERATOR ────────────────────────────── */
+const packingLists = {
+  beach: ['Sunscreen (SPF 50+)', 'Swimsuit(s)', 'Flip flops/sandals', 'Light cotton clothes', 'Hat/cap', 'Sunglasses', 'Waterproof bag', 'Towel', 'Lightweight scarf', 'After-sun lotion'],
+  mountain: ['Warm jacket', 'Thermal innerwear', 'Hiking boots', 'Woolen socks', 'Cap/beanie', 'Gloves', 'Water bottle', 'Backpack (40-50L)', 'Rain jacket', 'First aid kit'],
+  city: ['Comfortable walking shoes', 'Smart casual outfits', 'Power bank', 'Light daypack', 'Medications', 'Phone charger', 'Camera', 'Umbrella', 'Wallet & documents', 'Toiletries bag'],
+  desert: ['Light, loose clothing', 'High SPF sunscreen', 'Hat/scarf for sun', 'Sunglasses', 'Water bottle (large)', 'Lip balm', 'Moisturizer', 'Closed-toe shoes', 'Lightweight jacket for evening', 'Torch/flashlight'],
+};
+
+function showPackingList() {
+  document.getElementById('packingModal').style.display = 'flex';
+  document.getElementById('packingChecklist').innerHTML = '';
+}
+
+function generatePackingList(type) {
+  const list = packingLists[type] || packingLists.city;
+  const html = `<div><h4 style="margin:0 0 12px;color:var(--txt-dark)">${type.toUpperCase()} Packing List</h4>` +
+    list.map((item, i) => `<div style="display:flex;align-items:center;margin:8px 0;cursor:pointer" onclick="this.style.opacity='0.5'">
+      <input type="checkbox" id="pack-${i}" style="margin-right:10px;cursor:pointer"/>
+      <label for="pack-${i}" style="margin:0;cursor:pointer">${item}</label>
+    </div>`).join('') + '</div>';
+  document.getElementById('packingChecklist').innerHTML = html;
+}
+
+/* ── CURRENCY CONVERTER ───────────────────────────────── */
+const exchangeRates = { INR: 1, USD: 0.012, EUR: 0.011, GBP: 0.0095 };
+
+function showCurrencyConverter() {
+  document.getElementById('currencyModal').style.display = 'flex';
+  document.getElementById('currencyAmount').value = '1';
+  document.getElementById('currencyFrom').value = 'INR';
+  document.getElementById('currencyTo').value = 'USD';
+  convertCurrency();
+}
+
+function convertCurrency() {
+  const amount = +document.getElementById('currencyAmount').value || 1;
+  const from = document.getElementById('currencyFrom').value;
+  const to = document.getElementById('currencyTo').value;
+  const rateFrom = exchangeRates[from] || 1;
+  const rateTo = exchangeRates[to] || 1;
+  const result = (amount / rateFrom) * rateTo;
+  document.getElementById('currencyResult').value = result.toFixed(2);
+  const symbols = { INR: '₹', USD: '$', EUR: '€', GBP: '£' };
+  document.getElementById('exchangeRateInfo').textContent = `1 ${from} = ${(rateTo / rateFrom).toFixed(4)} ${to}`;
+}
+
+/* ── REVIEWS & RATINGS ────────────────────────────────── */
+async function loadReviews(placeId) {
+  try {
+    const response = await fetch(`/api/reviews?placeId=${placeId}`);
+    const data = await response.json();
+    let html = `<div style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <div style="font-size:2rem;font-weight:bold;color:var(--primary)">${data.avgRating}</div>
+        <div>
+          <div>${'⭐'.repeat(Math.round(data.avgRating))} (${data.totalReviews} reviews)</div>
+          <small style="color:#999">Based on traveler ratings</small>
+        </div>
+      </div>
+    </div>`;
+    if (data.reviews.length === 0) {
+      html += '<div style="text-align:center;color:#999;padding:20px">No reviews yet. Be the first to review!</div>';
+    } else {
+      html += data.reviews.map(r => `
+        <div style="border-bottom:1px solid #f0f0f0;padding:12px 0;margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <strong>${r.username}</strong>
+            <span style="color:#f59e0b">${'⭐'.repeat(r.rating)}</span>
+          </div>
+          <small style="color:#999">${new Date(r.createdAt).toLocaleDateString()}</small>
+          ${r.comment ? `<p style="margin:8px 0 0 0;color:var(--txt-mid);font-size:.9rem">${r.comment}</p>` : ''}
+        </div>
+      `).join('');
+    }
+    document.getElementById('reviewsContainer').innerHTML = html;
+  } catch (e) { console.error('Failed to load reviews', e); }
+}
+
+async function submitReview(placeId) {
+  const rating = +document.getElementById('reviewRating').value;
+  const comment = document.getElementById('reviewComment').value.trim();
+  if (!rating) { showToast('Please select a rating', 'error'); return; }
+  if (!currentUser) { showToast('Please log in to leave a review', 'error'); return; }
+  try {
+    const response = await fetch('/api/reviews', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({ placeId, rating, comment })
+    });
+    if (!response.ok) throw new Error(await response.text());
+    showToast('Review submitted successfully!', 'success');
+    document.getElementById('reviewRating').value = '';
+    document.getElementById('reviewComment').value = '';
+    loadReviews(placeId);
+  } catch (e) { showToast('Error submitting review: ' + e.message, 'error'); }
 }
 
 // Backwards-compatible wrapper used by feature cards

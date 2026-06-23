@@ -154,6 +154,17 @@ const tripSchema = new mongoose.Schema({
 }, { timestamps: true });
 const Trip = mongoose.model('Trip', tripSchema);
 
+const reviewSchema = new mongoose.Schema({
+  placeId:    { type: Number, required: true, index: true },
+  userId:     { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  username:   { type: String, required: true },
+  rating:     { type: Number, required: true, min: 1, max: 5 },
+  comment:    { type: String, maxlength: 500 },
+  visited:    { type: String }, // date or "Yes/No"
+  helpful:    { type: Number, default: 0 },
+}, { timestamps: true });
+const Review = mongoose.model('Review', reviewSchema);
+
 /* ── AUTO-ENRICH HELPERS (real images + nearby hotels/restaurants) ── */
 const UA = 'TravelGuru/7.0 (contact: admin@travelguru.in)';
 const PLACEHOLDER_IMG = 'No_Image_Available';
@@ -760,6 +771,29 @@ app.get('/api/all-restaurants', async (req, res) => {
       .sort({ rating: -1, name: 1 })
       .limit(limit).skip(skip);
     res.json({ total, count: restaurants.length, restaurants });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+/* ── PUBLIC: REVIEWS ──────────────────────────────────────── */
+app.get('/api/reviews', async (req, res) => {
+  try {
+    const placeId = req.query.placeId ? +req.query.placeId : null;
+    if (!placeId) return res.status(400).json({ error: 'placeId required' });
+    const reviews = await Review.find({ placeId }).sort({ createdAt: -1 }).limit(50);
+    const avgRating = reviews.length ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) : 0;
+    res.json({ totalReviews: reviews.length, avgRating, reviews });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/reviews', auth, async (req, res) => {
+  try {
+    const { placeId, rating, comment, visited } = req.body;
+    if (!placeId || !rating) return res.status(400).json({ error: 'placeId and rating required' });
+    const review = await Review.create({
+      placeId, rating, comment, visited,
+      userId: req.user.id, username: req.user.name
+    });
+    res.status(201).json({ success: true, review });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

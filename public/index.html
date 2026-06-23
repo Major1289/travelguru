@@ -27,6 +27,8 @@
       <a onclick="showPage('trips')" class="nav-a" data-page="trips">🗓️ My Trips</a>
     </div>
     <div class="nav-right">
+      <button class="btn-nav" onclick="showCurrencyConverter()" style="font-size:0.85rem">💱 Currency</button>
+      <button class="btn-nav" onclick="showPackingList()" style="font-size:0.85rem">🎒 Packing</button>
       <div id="userArea"></div>
       <button class="hamburger" onclick="toggleMenu()" id="hamburger">☰</button>
     </div>
@@ -274,7 +276,71 @@
     </div>
   </div>
 
-  <!-- ── TOAST ── -->
+  <!-- ── PACKING LIST MODAL ── -->
+<div id="packingModal" class="modal-overlay" onclick="if(event.target===this)document.getElementById('packingModal').style.display='none'">
+  <div class="modal-box" style="max-width:520px;padding:24px">
+    <button class="modal-close" onclick="document.getElementById('packingModal').style.display='none'">✕</button>
+    <h3 style="margin:0 0 16px">🎒 Smart Packing List</h3>
+    <p style="color:var(--txt-mid);font-size:.9rem;margin:0 0 16px">Select your destination type to get a personalized packing checklist.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <button class="btn-primary" onclick="generatePackingList('beach')" style="padding:12px">🏖️ Beach</button>
+      <button class="btn-primary" onclick="generatePackingList('mountain')" style="padding:12px">⛰️ Mountain</button>
+      <button class="btn-primary" onclick="generatePackingList('city')" style="padding:12px">🏙️ City</button>
+      <button class="btn-primary" onclick="generatePackingList('desert')" style="padding:12px">🏜️ Desert</button>
+    </div>
+    <div id="packingChecklist" style="max-height:400px;overflow:auto;background:#f9f9f9;border-radius:10px;padding:14px"></div>
+  </div>
+</div>
+
+<!-- ── CURRENCY CONVERTER MODAL ── -->
+<div id="currencyModal" class="modal-overlay" onclick="if(event.target===this)document.getElementById('currencyModal').style.display='none'">
+  <div class="modal-box" style="max-width:400px;padding:24px">
+    <button class="modal-close" onclick="document.getElementById('currencyModal').style.display='none'">✕</button>
+    <h3 style="margin:0 0 16px">💱 Currency Converter</h3>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <input type="number" id="currencyAmount" placeholder="Amount" value="1" min="0" style="flex:1;padding:10px;border-radius:8px;border:1px solid #eee"/>
+      <select id="currencyFrom" style="flex:1;padding:10px;border-radius:8px;border:1px solid #eee">
+        <option value="INR">INR ₹</option><option value="USD">USD $</option><option value="EUR">EUR €</option><option value="GBP">GBP £</option>
+      </select>
+    </div>
+    <div style="text-align:center;font-size:.9rem;color:#666;margin:12px 0">→</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <input type="text" id="currencyResult" placeholder="Converted amount" readonly style="flex:1;padding:10px;border-radius:8px;border:1px solid #eee;background:#f5f5f5"/>
+      <select id="currencyTo" style="flex:1;padding:10px;border-radius:8px;border:1px solid #eee">
+        <option value="USD">USD $</option><option value="EUR">EUR €</option><option value="GBP">GBP £</option><option value="INR">INR ₹</option>
+      </select>
+    </div>
+    <button class="btn-primary" onclick="convertCurrency()" style="width:100%;padding:10px">Convert</button>
+    <div id="exchangeRateInfo" style="font-size:.8rem;color:#999;text-align:center;margin-top:12px"></div>
+  </div>
+</div>
+
+<!-- ── QUICK NAVIGATOR (visible state/place picker) ── -->
+<div id="quickNavModal" class="modal-overlay" onclick="if(event.target===this)hideQuickNavigator()" style="display:none;">
+  <div class="modal-box" style="max-width:520px;padding:18px">
+    <button class="modal-close" onclick="hideQuickNavigator()">✕</button>
+    <div style="padding:8px 6px 0 6px">
+      <h3 style="margin:4px 0 8px">Find a place</h3>
+      <p style="margin:0 0 12px;color:var(--txt-mid);font-size:.9rem">Select a state, type a place name, and choose from suggestions.</p>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <select id="quick-state" style="flex:1;padding:8px;border-radius:8px;border:1px solid #eee"></select>
+        <input id="quick-place" placeholder="Type place name..." style="flex:2;padding:8px;border-radius:8px;border:1px solid #eee"/>
+      </div>
+      <div id="quick-suggestions" style="max-height:220px;overflow:auto;border-radius:8px;padding:6px;border:1px dashed #f0f0f0;background:#fff"></div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn-primary" onclick="quickNavOpenSelected()">Open Place</button>
+        <button class="btn-outline" onclick="hideQuickNavigator()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── FLOATING WHATSAPP BUTTON ── -->
+<a href="https://wa.me/919876543210?text=Hi%20Travel%20Guru!%20I%20want%20to%20book%20a%20trip" target="_blank" rel="noopener" id="whatsappBtn" style="position:fixed;bottom:24px;right:24px;width:56px;height:56px;background:#25D366;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:28px;box-shadow:0 4px 12px rgba(0,0,0,0.2);z-index:999;text-decoration:none;transition:all 0.3s" onmouseover="this.style.boxShadow='0 8px 20px rgba(0,0,0,0.3)'" onmouseout="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.2)'">
+  💬
+</a>
+
+<!-- ── TOAST ── -->
   <div id="toast" class="toast"></div>
 
 <script src="/app.js"></script>
