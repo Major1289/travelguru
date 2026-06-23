@@ -882,3 +882,24 @@ function formatTime(d) {
   if (!d) return '';
   return new Date(d).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
 }
+
+/* ── QUICK PROMPT NAVIGATION ───────────────────────────── */
+async function askStateAndPlace() {
+  await loadMeta(); await loadAllPlaces();
+  const stateInput = prompt('Enter state name (e.g. Maharashtra)\nAvailable: ' + allStates.join(', '));
+  if (!stateInput) return;
+  const state = stateInput.trim();
+  const candidates = allPlaces.filter(p => (p.state||'').toLowerCase() === state.toLowerCase());
+  if (!candidates.length) { showToast('No places found for that state', 'error'); return; }
+  const sample = candidates.slice(0,10).map(p => p.name).join(', ');
+  const placeInput = prompt('Enter place name (or part of it)\nExamples: ' + sample);
+  if (!placeInput) return;
+  const q = placeInput.trim().toLowerCase();
+  const matches = candidates.filter(p => (p.name||'').toLowerCase().includes(q));
+  if (!matches.length) { showToast('No matching place found', 'error'); return; }
+  if (matches.length === 1) { openPlace(matches[0].placeId); return; }
+  const list = matches.slice(0,15).map((p,i) => `${i+1}. ${p.name}`).join('\n');
+  const sel = prompt('Multiple matches found. Enter number to open:\n' + list);
+  const idx = parseInt(sel, 10) - 1;
+  if (!isNaN(idx) && matches[idx]) openPlace(matches[idx].placeId);
+}
