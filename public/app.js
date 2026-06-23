@@ -883,23 +883,71 @@ function formatTime(d) {
   return new Date(d).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
 }
 
-/* ── QUICK PROMPT NAVIGATION ───────────────────────────── */
-async function askStateAndPlace() {
+/* ── QUICK NAVIGATOR (visible UI) ───────────────────────── */
+async function showQuickNavigator() {
   await loadMeta(); await loadAllPlaces();
-  const stateInput = prompt('Enter state name (e.g. Maharashtra)\nAvailable: ' + allStates.join(', '));
-  if (!stateInput) return;
-  const state = stateInput.trim();
-  const candidates = allPlaces.filter(p => (p.state||'').toLowerCase() === state.toLowerCase());
-  if (!candidates.length) { showToast('No places found for that state', 'error'); return; }
-  const sample = candidates.slice(0,10).map(p => p.name).join(', ');
-  const placeInput = prompt('Enter place name (or part of it)\nExamples: ' + sample);
-  if (!placeInput) return;
-  const q = placeInput.trim().toLowerCase();
-  const matches = candidates.filter(p => (p.name||'').toLowerCase().includes(q));
-  if (!matches.length) { showToast('No matching place found', 'error'); return; }
-  if (matches.length === 1) { openPlace(matches[0].placeId); return; }
-  const list = matches.slice(0,15).map((p,i) => `${i+1}. ${p.name}`).join('\n');
-  const sel = prompt('Multiple matches found. Enter number to open:\n' + list);
-  const idx = parseInt(sel, 10) - 1;
-  if (!isNaN(idx) && matches[idx]) openPlace(matches[idx].placeId);
+  const modal = document.getElementById('quickNavModal');
+  const stateSel = document.getElementById('quick-state');
+  const placeInp = document.getElementById('quick-place');
+  const sugg = document.getElementById('quick-suggestions');
+  stateSel.innerHTML = '<option value="">Select state</option>' + allStates.map(s=>`<option value="${s}">${s}</option>`).join('');
+  placeInp.value = '';
+  sugg.innerHTML = '';
+  stateSel.onchange = onQuickStateChange;
+  placeInp.oninput = onQuickPlaceInput;
+  modal.style.display = 'flex';
+  setTimeout(()=>modal.classList.add('open'),10);
+  placeInp.focus();
 }
+
+function hideQuickNavigator() {
+  const modal = document.getElementById('quickNavModal');
+  if (!modal) return; modal.classList.remove('open');
+  setTimeout(()=>modal.style.display='none',180);
+}
+
+function onQuickStateChange(e) {
+  const state = e.target.value;
+  const sugg = document.getElementById('quick-suggestions');
+  sugg.innerHTML = '';
+  if (!state) return;
+  const list = allPlaces.filter(p => (p.state||'').toLowerCase() === state.toLowerCase())
+    .slice(0,200).sort((a,b)=>a.name.localeCompare(b.name));
+  if (!list.length) { sugg.innerHTML = '<div class="empty-state">No places for this state</div>'; return; }
+  sugg.innerHTML = list.slice(0,20).map(p=>`<div class="quick-sug-item" data-id="${p.placeId}" onclick="selectQuickSuggestion(this)" style="padding:8px;border-bottom:1px solid #f4f4f4;cursor:pointer">${p.name} <small style="color:#999">• ${p.category||''}</small></div>`).join('');
+}
+
+function onQuickPlaceInput(e) {
+  const q = (e.target.value||'').trim().toLowerCase();
+  const state = document.getElementById('quick-state').value;
+  const sugg = document.getElementById('quick-suggestions');
+  if (!q) { if (state) onQuickStateChange({ target: { value: state } }); else sugg.innerHTML=''; return; }
+  const candidates = allPlaces.filter(p => {
+    if (state && p.state.toLowerCase() !== state.toLowerCase()) return false;
+    return (p.name||'').toLowerCase().includes(q) || (p.city||'').toLowerCase().includes(q);
+  }).slice(0,40);
+  if (!candidates.length) { sugg.innerHTML = '<div class="empty-state">No matches</div>'; return; }
+  sugg.innerHTML = candidates.map(p=>`<div class="quick-sug-item" data-id="${p.placeId}" onclick="selectQuickSuggestion(this)" style="padding:8px;border-bottom:1px solid #f4f4f4;cursor:pointer">${p.name} <small style="color:#999">• ${p.state}</small></div>`).join('');
+}
+
+function selectQuickSuggestion(el) {
+  const id = +el.dataset.id;
+  if (!id) return;
+  openPlace(id);
+  hideQuickNavigator();
+}
+
+function quickNavOpenSelected() {
+  const sugg = document.getElementById('quick-suggestions');
+  const first = sugg.querySelector('.quick-sug-item');
+  if (first) { selectQuickSuggestion(first); return; }
+  const state = document.getElementById('quick-state').value;
+  const q = (document.getElementById('quick-place').value||'').trim().toLowerCase();
+  if (!state || !q) { showToast('Select state and enter place name', 'error'); return; }
+  const match = allPlaces.find(p => p.state.toLowerCase()===state.toLowerCase() && p.name.toLowerCase().includes(q));
+  if (!match) { showToast('No matching place found', 'error'); return; }
+  openPlace(match.placeId); hideQuickNavigator();
+}
+
+// Backwards-compatible wrapper used by feature cards
+function askStateAndPlace() { showQuickNavigator(); }

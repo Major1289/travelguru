@@ -204,8 +204,28 @@
   </div>
 </div>
 
-<!-- ── TOAST ── -->
-<div id="toast" class="toast"></div>
+  <!-- ── QUICK NAVIGATOR (visible state/place picker) ── -->
+  <div id="quickNavModal" class="modal-overlay" onclick="if(event.target===this)hideQuickNavigator()" style="display:none;">
+    <div class="modal-box" style="max-width:520px;padding:18px">
+      <button class="modal-close" onclick="hideQuickNavigator()">✕</button>
+      <div style="padding:8px 6px 0 6px">
+        <h3 style="margin:4px 0 8px">Find a place</h3>
+        <p style="margin:0 0 12px;color:var(--txt-mid);font-size:.9rem">Select a state, type a place name, and choose from suggestions.</p>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <select id="quick-state" style="flex:1;padding:8px;border-radius:8px;border:1px solid #eee"></select>
+          <input id="quick-place" placeholder="Type place name..." style="flex:2;padding:8px;border-radius:8px;border:1px solid #eee"/>
+        </div>
+        <div id="quick-suggestions" style="max-height:220px;overflow:auto;border-radius:8px;padding:6px;border:1px dashed #f0f0f0;background:#fff"></div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn-primary" onclick="quickNavOpenSelected()">Open Place</button>
+          <button class="btn-outline" onclick="hideQuickNavigator()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TOAST ── -->
+  <div id="toast" class="toast"></div>
 
 <script src="/app.js"></script>
 </body>
