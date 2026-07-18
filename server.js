@@ -204,6 +204,35 @@ async function fetchWikiImage(name, state) {
   }
 }
 
+// Search Wikimedia Commons for image files matching the place name and return a small gallery of URLs.
+async function fetchWikiImageUrls(name, state, limit = 4) {
+  try {
+    const query = `${name} ${state || ''}`.trim();
+    const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srnamespace=6&format=json&srlimit=${limit}`;
+    const sRes = await fetch(searchUrl, { headers: { 'User-Agent': UA } });
+    const sData = await sRes.json();
+    const titles = (sData?.query?.search || []).map(item => item.title).filter(Boolean);
+    const urls = [];
+
+    for (const title of titles) {
+      const imgInfoUrl = `https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=imageinfo&iiprop=url&format=json`;
+      const iRes = await fetch(imgInfoUrl, { headers: { 'User-Agent': UA } });
+      const iData = await iRes.json();
+      const pages = iData?.query?.pages || {};
+      const page = Object.values(pages)[0];
+      const url = page?.imageinfo?.[0]?.url;
+      if (url && !urls.includes(url)) urls.push(url);
+    }
+
+    if (urls.length) return urls;
+    const primary = await fetchWikiImage(name, state);
+    return primary ? [primary] : [];
+  } catch (e) {
+    console.error('fetchWikiImageUrls error:', e.message);
+    return [];
+  }
+}
+
 // Search Wikimedia Commons for an image file matching the place name and return its direct image URL.
 async function fetchCommonsImage(name, state) {
   try {
@@ -274,7 +303,19 @@ async function fetchNearbyOSM(lat, lng, radiusM = 8000) {
       headers: { 'Content-Type': 'text/plain', 'User-Agent': UA },
       body: query,
     });
-    const data = await res.json();
+
+    if (!res.ok) {
+      return { hotels: [], restaurants: [] };
+    }
+
+    const text = await res.text();
+    let data = {};
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return { hotels: [], restaurants: [] };
+    }
+
     const elements = data?.elements || [];
     const hotels = [];
     const restaurants = [];
@@ -885,7 +926,23 @@ app.get('/api/places/:id', async (req, res) => {
   try {
     const p = await Place.findOne({ placeId: +req.params.id });
     if (!p) return res.status(404).json({ error: 'Not found' });
-    res.json(p);
+
+    const placeObj = p.toObject ? p.toObject() : JSON.parse(JSON.stringify(p));
+    const images = Array.isArray(placeObj.images) && placeObj.images.length
+      ? placeObj.images
+      : (Array.isArray(placeObj.imgs) && placeObj.imgs.length ? placeObj.imgs : []);
+
+    if (!images.length && placeObj.img) {
+      const discovered = await fetchWikiImageUrls(placeObj.name, placeObj.state, 4);
+      placeObj.images = discovered.length ? discovered : [placeObj.img];
+    } else if (!images.length && !placeObj.img) {
+      const discovered = await fetchWikiImageUrls(placeObj.name, placeObj.state, 4);
+      placeObj.images = discovered;
+    } else if (images.length && !placeObj.img) {
+      placeObj.img = images[0];
+    }
+
+    res.json(placeObj);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

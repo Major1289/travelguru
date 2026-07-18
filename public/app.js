@@ -336,7 +336,74 @@ function renderGrid(targetId, places) {
   grid.innerHTML = places.map(p => placeCardHTML(p)).join('');
 }
 
-function hasRealImg(p) { return !!(p.img && !p.img.includes('No_Image_Available')); }
+function normalizeImageUrls(place) {
+  const images = [];
+  const seen = new Set();
+
+  const addImage = (value) => {
+    if (!value) return;
+    const str = String(value).trim();
+    if (!str || seen.has(str) || str.includes('No_Image_Available')) return;
+    seen.add(str);
+    images.push(str);
+  };
+
+  const collect = (value) => {
+    if (Array.isArray(value)) {
+      value.forEach(addImage);
+      return;
+    }
+    if (typeof value === 'string') {
+      value.split(/\||;|,\s*/).map(v => v.trim()).filter(Boolean).forEach(addImage);
+    }
+  };
+
+  collect(place?.images || place?.imgs || place?.imageUrls || place?.gallery);
+  collect(place?.img);
+  return images;
+}
+
+function getPlaceImageUrls(place) {
+  return normalizeImageUrls(place);
+}
+
+function hasRealImg(p) {
+  return getPlaceImageUrls(p).length > 0;
+}
+
+function switchGalleryImage(img) {
+  const gallery = img.closest('.modal-gallery');
+  if (!gallery) return;
+  const main = gallery.querySelector('.modal-gallery-main');
+  if (!main) return;
+  main.src = img.src;
+  main.alt = img.alt || main.alt;
+  gallery.querySelectorAll('.modal-gallery-thumb').forEach(thumb => {
+    thumb.classList.toggle('active', thumb === img);
+  });
+}
+
+function renderPlaceGallery(place) {
+  const images = getPlaceImageUrls(place);
+  if (!images.length) {
+    return `<div class="modal-hero-placeholder" style="background:${place.bg || 'linear-gradient(135deg,#667eea,#764ba2)'}">
+      <span style="font-size:5rem">${place.emoji || '📍'}</span>
+    </div>`;
+  }
+
+  const thumbs = images.slice(0, 6).map((url, index) => `
+    <img class="modal-gallery-thumb ${index === 0 ? 'active' : ''}" src="${url}" alt="${place.name} photo ${index + 1}" loading="lazy" onclick="switchGalleryImage(this)" onerror="this.style.display='none'">
+  `).join('');
+
+  return `
+    <div class="modal-gallery">
+      <img class="modal-gallery-main" src="${images[0]}" alt="${place.name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="modal-gallery-fallback" style="display:none;background:${place.bg || 'linear-gradient(135deg,#667eea,#764ba2)'}">
+        <span style="font-size:5rem">${place.emoji || '📍'}</span>
+      </div>
+      <div class="modal-gallery-thumbs">${thumbs}</div>
+    </div>`;
+}
 
 function safeUrl(url) {
   if (!url) return '';
@@ -403,12 +470,7 @@ async function openPlace(placeId) {
     const isWishlisted = wishlist.includes(placeId);
 
     content.innerHTML = `
-      ${hasRealImg(place)
-        ? `<img class="modal-hero-img" src="${place.img}" alt="${place.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
-        : ''}
-      <div class="modal-hero-placeholder" style="${hasRealImg(place)?'display:none':'display:flex'}; background:${place.bg||'linear-gradient(135deg,#667eea,#764ba2)'}">
-        <span style="font-size:5rem">${place.emoji||'📍'}</span>
-      </div>
+      ${renderPlaceGallery(place)}
       <div class="modal-body">
         <span class="modal-state-badge">${place.state}</span>
         <h2 class="modal-title">${place.name}</h2>
