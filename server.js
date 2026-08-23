@@ -21,7 +21,7 @@ const JWT_SECRET       = process.env.JWT_SECRET || 'travelguru_secret_2025';
 const ADMIN_ID         = process.env.ADMIN_ID   || 'admin@travelguru.in';
 const ADMIN_PASS       = process.env.ADMIN_PASS || 'Admin@TG2025#Secure';
 const GOOGLE_MAPS_KEY  = process.env.GOOGLE_MAPS_API_KEY || '';
-const PORT             = process.env.PORT       || 8080;
+const PORT             = parseInt(process.env.PORT, 10) || 8080;
 
 /* ── MongoDB Connection with retry ──────────────────────── */
 async function connectDB() {
@@ -169,6 +169,130 @@ const Review = mongoose.model('Review', reviewSchema);
 const UA = 'TravelGuru/7.0 (contact: admin@travelguru.in)';
 const PLACEHOLDER_IMG = 'No_Image_Available';
 
+// Helper to safely parse JSON responses and log text when parsing fails
+async function safeParseJson(res) {
+  if (!res) return null;
+  const ct = (res.headers.get('content-type') || '').toLowerCase();
+  const text = await res.text();
+  if (ct.includes('application/json') || ct.includes('application/ld+json') || text.trim().startsWith('{') || text.trim().startsWith('[')) {
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      console.error('safeParseJson: JSON parse failed, response text preview:', text.slice(0,200).replace(/\n/g,' '));
+      return null;
+    }
+  }
+  // not JSON
+  console.error('safeParseJson: response not JSON, content-type=', ct, 'preview=', text.slice(0,200).replace(/\n/g,' '));
+  return null;
+}
+
+// Simple in-memory cache for proxied images (url -> { buf, type, ts })
+const imageCache = new Map();
+
+// Image proxy to avoid client-side rate limits and mixed-content issues.
+// Only allow a small set of trusted hosts to prevent open proxy abuse.
+app.get('/img-proxy', async (req, res) => {
+  try {
+    const url = req.query.url;
+    if (!url) return res.status(400).send('missing url');
+    let parsed;
+    try { parsed = new URL(url); } catch { return res.status(400).send('invalid url'); }
+    const allowedHosts = ['upload.wikimedia.org', 'upload1.wikimedia.org', 'images.unsplash.com', 'i.imgur.com', 'commons.wikimedia.org'];
+    if (!allowedHosts.includes(parsed.host)) return res.status(400).send('host not allowed');
+
+    const cacheEntry = imageCache.get(url);
+    const now = Date.now();
+    if (cacheEntry && (now - cacheEntry.ts) < 1000 * 60 * 60 * 24) { // 24h cache
+      res.set('Content-Type', cacheEntry.type || 'image/jpeg');
+      res.set('Cache-Control', 'public, max-age=86400');
+      return res.send(cacheEntry.buf);
+    }
+
+    // Try fetching, with a small retry on 429
+    let r = await fetch(url, { headers: { 'User-Agent': UA } });
+    if (r.status === 429) {
+      // brief pause and retry once
+      await new Promise(rp => setTimeout(rp, 1000));
+      r = await fetch(url, { headers: { 'User-Agent': UA } });
+    }
+    // If thumbnail missing (404) on Wikimedia, try to request the original file URL
+    if (r.status === 404 && parsed.host.includes('upload.wikimedia.org')) {
+      // convert /thumb/.../1280px-Name.jpg -> /.../Name.jpg
+      let alt = url.replace('/thumb', '');
+      alt = alt.replace(/\/\d+px-/, '');
+      try {
+        const r2 = await fetch(alt, { headers: { 'User-Agent': UA } });
+        if (r2.ok) r = r2;
+      } catch (e) {
+        // ignore
+      }
+    }
+    if (!r.ok) return res.status(r.status).send('remote error');
+    const type = r.headers.get('content-type') || 'image/jpeg';
+    const arr = await r.arrayBuffer();
+    const buf = Buffer.from(arr);
+    // store lightweight cache (avoid extremely large images)
+    if (buf.length < 5 * 1024 * 1024) imageCache.set(url, { buf, type, ts: now });
+    res.set('Content-Type', type);
+    res.set('Cache-Control', 'public, max-age=86400');
+    return res.send(buf);
+  } catch (e) {
+    console.error('img-proxy error', e.message);
+    return res.status(500).send('proxy error');
+  }
+});
+
+// On-demand fetch for a place: try to find a real image via Wikipedia/Commons and save it.
+app.get('/api/places/:placeId/fetch-image', async (req, res) => {
+  try {
+    const placeId = parseInt(req.params.placeId, 10);
+    if (!placeId) return res.status(400).json({ error: 'invalid id' });
+    const place = await Place.findOne({ placeId });
+    if (!place) return res.status(404).json({ error: 'not found' });
+    if (place.img && !isMissingImg(place.img)) {
+      try {
+        const check = await fetch(place.img, { method: 'HEAD', headers: { 'User-Agent': UA } });
+        const ctype = (check.headers.get('content-type') || '').toLowerCase();
+        if (check.ok && ctype.startsWith('image/')) return res.json({ img: place.img });
+        // otherwise proceed to re-fetch
+      } catch (e) {
+        // ignore and continue to fetch new
+      }
+    }
+    // Try Wikipedia page image first
+    let found = await fetchWikiImage(place.name, place.state);
+    // If found but invalid (404/HTML), try Commons search for multiple candidates
+    const validateCandidate = async (url) => {
+      try {
+        const h = await fetch(url, { method: 'HEAD', headers: { 'User-Agent': UA } });
+        const ctype = (h.headers.get('content-type') || '').toLowerCase();
+        return h.ok && ctype.startsWith('image/');
+      } catch { return false; }
+    };
+
+    if (found) {
+      const ok = await validateCandidate(found);
+      if (!ok) found = null;
+    }
+
+    if (!found) {
+      const candidates = await fetchWikiImageUrls(place.name, place.state, 6);
+      for (const c of candidates) {
+        if (await validateCandidate(c)) { found = c; break; }
+      }
+    }
+
+    if (!found) return res.status(404).json({ error: 'no image found' });
+    place.img = found;
+    await place.save();
+    return res.json({ img: found });
+  } catch (e) {
+    console.error('fetch-image route error', e.message);
+    return res.status(500).json({ error: 'server error' });
+  }
+});
+
 function isMissingImg(img) {
   return !img || img.includes(PLACEHOLDER_IMG);
 }
@@ -180,12 +304,12 @@ async function fetchWikiImage(name, state) {
     // 1) Try English Wikipedia pageimages (gives a reasonably sized thumbnail)
     const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&srlimit=1`;
     const sRes = await fetch(searchUrl, { headers: { 'User-Agent': UA } });
-    const sData = await sRes.json();
+    const sData = await safeParseJson(sRes);
     const title = sData?.query?.search?.[0]?.title;
     if (title) {
       const imgUrl = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=pageimages&format=json&pithumbsize=2000`;
       const iRes = await fetch(imgUrl, { headers: { 'User-Agent': UA } });
-      const iData = await iRes.json();
+      const iData = await safeParseJson(iRes);
       const pages = iData?.query?.pages || {};
       const page = Object.values(pages)[0];
       const thumb = page?.thumbnail?.source;
@@ -210,14 +334,14 @@ async function fetchWikiImageUrls(name, state, limit = 4) {
     const query = `${name} ${state || ''}`.trim();
     const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srnamespace=6&format=json&srlimit=${limit}`;
     const sRes = await fetch(searchUrl, { headers: { 'User-Agent': UA } });
-    const sData = await sRes.json();
+    const sData = await safeParseJson(sRes);
     const titles = (sData?.query?.search || []).map(item => item.title).filter(Boolean);
     const urls = [];
 
     for (const title of titles) {
       const imgInfoUrl = `https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=imageinfo&iiprop=url&format=json`;
       const iRes = await fetch(imgInfoUrl, { headers: { 'User-Agent': UA } });
-      const iData = await iRes.json();
+      const iData = await safeParseJson(iRes);
       const pages = iData?.query?.pages || {};
       const page = Object.values(pages)[0];
       const url = page?.imageinfo?.[0]?.url;
@@ -239,12 +363,12 @@ async function fetchCommonsImage(name, state) {
     const query = `${name} ${state || ''}`.trim();
     const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srnamespace=6&format=json&srlimit=1`;
     const sRes = await fetch(searchUrl, { headers: { 'User-Agent': UA } });
-    const sData = await sRes.json();
+    const sData = await safeParseJson(sRes);
     const title = sData?.query?.search?.[0]?.title; // e.g. "File:Something.jpg"
     if (!title) return null;
     const imgInfoUrl = `https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=imageinfo&iiprop=url&format=json`;
     const iRes = await fetch(imgInfoUrl, { headers: { 'User-Agent': UA } });
-    const iData = await iRes.json();
+    const iData = await safeParseJson(iRes);
     const pages = iData?.query?.pages || {};
     const page = Object.values(pages)[0];
     const url = page?.imageinfo?.[0]?.url;
@@ -264,7 +388,7 @@ async function fetchGoogleImage(name, state) {
     const query = `${name} ${state || ''}`.trim();
     const url = `https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(key)}&cx=${encodeURIComponent(cx)}&q=${encodeURIComponent(query)}&searchType=image&num=1`;
     const res = await fetch(url, { headers: { 'User-Agent': UA } });
-    const data = await res.json();
+    const data = await safeParseJson(res);
     const link = data?.items?.[0]?.link;
     return link || null;
   } catch (e) {
@@ -278,7 +402,7 @@ async function geocodePlace(name, state) {
   try {
     const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(name + ', ' + (state || '') + ', India')}`;
     const res = await fetch(url, { headers: { 'User-Agent': UA } });
-    const data = await res.json();
+    const data = await safeParseJson(res);
     if (data?.[0]) return { lat: +data[0].lat, lng: +data[0].lon };
     return null;
   } catch (e) {
@@ -1033,13 +1157,41 @@ io.on('connection', socket => {
 
 /* ── START ────────────────────────────────────────────────── */
 connectDB().then(() => {
-  server.listen(PORT, () => {
-    console.log('');
-    console.log('  🧭  Travel Guru v6 is running!');
-    console.log(`  🌐  Website  →  http://localhost:${PORT}`);
-    console.log(`  🔐  Admin    →  http://localhost:${PORT}/admin`);
-    console.log(`  👤  Admin ID :  ${ADMIN_ID}`);
-    console.log(`  🔑  Password :  ${ADMIN_PASS}`);
-    console.log('');
+  const MAX_PORT_ATTEMPTS = 10;
+  const tryListen = (port, attempt = 0) => {
+    return new Promise((resolve, reject) => {
+      const onError = (err) => {
+        server.removeListener('listening', onListen);
+        if (err && err.code === 'EADDRINUSE' && attempt < MAX_PORT_ATTEMPTS) {
+          console.warn(`Port ${port} in use; trying port ${port + 1} (attempt ${attempt + 1})`);
+          setTimeout(() => {
+            tryListen(port + 1, attempt + 1).then(resolve).catch(reject);
+          }, 300);
+          return;
+        }
+        reject(err);
+      };
+
+      const onListen = () => {
+        server.removeListener('error', onError);
+        console.log('');
+        console.log('  🧭  Travel Guru v6 is running!');
+        console.log(`  🌐  Website  →  http://localhost:${port}`);
+        console.log(`  🔐  Admin    →  http://localhost:${port}/admin`);
+        console.log(`  👤  Admin ID :  ${ADMIN_ID}`);
+        console.log(`  🔑  Password :  ${ADMIN_PASS}`);
+        console.log('');
+        resolve(port);
+      };
+
+      server.once('error', onError);
+      server.once('listening', onListen);
+      server.listen(port);
+    });
+  };
+
+  tryListen(Number(PORT) || 8080).catch(err => {
+    console.error('Failed to start server:', err && err.message ? err.message : err);
+    process.exit(1);
   });
 });

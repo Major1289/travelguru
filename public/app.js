@@ -13,8 +13,31 @@ let allRestaurants = [], filteredRestaurants = [], restOffset = 0;
 let socket = null;
 let chatRoom = null, chatPlaceId = null;
 
+function applyTheme() {
+  const saved = localStorage.getItem('tg_theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const dark = saved ? saved === 'dark' : prefersDark;
+  document.body.classList.toggle('dark', dark);
+  const toggle = document.getElementById('themeToggle');
+  if (toggle) {
+    toggle.innerHTML = dark ? '☀️' : '🌙';
+    toggle.setAttribute('aria-pressed', dark ? 'true' : 'false');
+  }
+}
+
+function toggleTheme() {
+  const dark = document.body.classList.toggle('dark');
+  localStorage.setItem('tg_theme', dark ? 'dark' : 'light');
+  const toggle = document.getElementById('themeToggle');
+  if (toggle) {
+    toggle.innerHTML = dark ? '☀️' : '🌙';
+    toggle.setAttribute('aria-pressed', dark ? 'true' : 'false');
+  }
+}
+
 /* ── INIT ──────────────────────────────────────────────── */
 window.addEventListener('DOMContentLoaded', async () => {
+  applyTheme();
   checkAuth();
   await loadMeta();
   buildCatPills();
@@ -288,10 +311,11 @@ function renderExplore() {
   info.textContent = `Showing ${Math.min(filteredPlaces.length, BATCH)} of ${filteredPlaces.length} destinations`;
   const batch = filteredPlaces.slice(0, BATCH);
   exploreOffset = batch.length;
-  grid.innerHTML = batch.length ? batch.map(p => placeCardHTML(p)).join('') :
+    grid.innerHTML = batch.length ? batch.map(p => placeCardHTML(p)).join('') : 
     '<div class="empty-state"><div class="empty-icon">🔍</div><h3>No places found</h3><p>Try different filters</p></div>';
   const moreWrap = document.getElementById('loadMoreWrap');
   moreWrap.style.display = filteredPlaces.length > BATCH ? 'block' : 'none';
+    applyCardBackgrounds();
 }
 
 function loadMore() {
@@ -303,6 +327,7 @@ function loadMore() {
     `Showing ${exploreOffset} of ${filteredPlaces.length} destinations`;
   if (exploreOffset >= filteredPlaces.length)
     document.getElementById('loadMoreWrap').style.display = 'none';
+    applyCardBackgrounds();
 }
 
 /* ── STATES PAGE ──────────────────────────────────────── */
@@ -323,6 +348,7 @@ async function loadStatesPage() {
       </div>
     </div>`
   ).join('');
+    applyCardBackgrounds();
 }
 
 /* ── RENDER GRID ──────────────────────────────────────── */
@@ -334,6 +360,8 @@ function renderGrid(targetId, places) {
     return;
   }
   grid.innerHTML = places.map(p => placeCardHTML(p)).join('');
+  // ensure backgrounds are preloaded and applied
+  applyCardBackgrounds();
 }
 
 function normalizeImageUrls(place) {
@@ -368,7 +396,12 @@ function getPlaceImageUrls(place) {
 }
 
 function hasRealImg(p) {
-  return getPlaceImageUrls(p).length > 0;
+  return Boolean(getPlaceHeroImage(p));
+}
+
+function getPlaceHeroImage(place) {
+  const images = getPlaceImageUrls(place);
+  return images[0] || place?.img || '';
 }
 
 function switchGalleryImage(img) {
@@ -392,12 +425,12 @@ function renderPlaceGallery(place) {
   }
 
   const thumbs = images.slice(0, 6).map((url, index) => `
-    <img class="modal-gallery-thumb ${index === 0 ? 'active' : ''}" src="${url}" alt="${place.name} photo ${index + 1}" loading="lazy" onclick="switchGalleryImage(this)" onerror="this.style.display='none'">
+    <img class="modal-gallery-thumb ${index === 0 ? 'active' : ''}" src="${proxiedUrl(url)}" alt="${place.name} photo ${index + 1}" loading="lazy" onclick="switchGalleryImage(this)" onerror="this.style.display='none'">
   `).join('');
 
   return `
     <div class="modal-gallery">
-      <img class="modal-gallery-main" src="${images[0]}" alt="${place.name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <img class="modal-gallery-main" src="${proxiedUrl(images[0])}" alt="${place.name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
       <div class="modal-gallery-fallback" style="display:none;background:${place.bg || 'linear-gradient(135deg,#667eea,#764ba2)'}">
         <span style="font-size:5rem">${place.emoji || '📍'}</span>
       </div>
@@ -410,6 +443,12 @@ function safeUrl(url) {
   return /^https?:\/\//i.test(url) ? url : `https://${url}`;
 }
 
+function proxiedUrl(url) {
+  if (!url) return '';
+  const u = safeUrl(url);
+  return `/img-proxy?url=${encodeURIComponent(u)}`;
+}
+
 function mapsSearchUrl(query, lat, lng) {
   if (!query || !lat || !lng) return '';
   return `https://www.google.com/maps/search/${encodeURIComponent(query)}/@${lat},${lng},13z`;
@@ -417,15 +456,17 @@ function mapsSearchUrl(query, lat, lng) {
 
 function placeCardHTML(p) {
   const isWishlisted = wishlist.includes(p.placeId);
-  return `<div class="place-card" onclick="openPlace(${p.placeId})">
-    <div class="card-img-wrap">
-      ${hasRealImg(p)
-        ? `<img class="card-img" src="${p.img}" alt="${p.name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
-        : ''}
-      <div class="img-placeholder" style="display:${hasRealImg(p)?'none':'flex'}">${p.emoji||'📍'}</div>
-      <div class="card-badge">${p.category||'Destination'}</div>
-      ${p.featured ? '<div class="card-featured">⭐ Featured</div>' : ''}
-    </div>
+  const heroImage = getPlaceHeroImage(p);
+  const hasImg = Boolean(heroImage);
+    return `<div class="place-card" onclick="openPlace(${p.placeId})">
+      <div class="card-img-wrap" data-bg="${hasImg ? safeUrl(heroImage) : ''}">
+        ${hasImg
+          ? `<img class="card-img" src="${proxiedUrl(heroImage)}" alt="${p.name}" loading="lazy" onload="this.parentElement.classList.add('img-loaded'); this.parentElement.querySelector('.img-placeholder').style.display='none'" onerror="handleImgError(this,${p.placeId})">`
+          : ''}
+        <div class="img-placeholder" style="display:${hasImg ? 'none' : 'flex'}">${p.emoji||'📍'}</div>
+        <div class="card-badge">${p.category||'Destination'}</div>
+        ${p.featured ? '<div class="card-featured">✨ Featured</div>' : ''}
+      </div>
     <div class="card-body">
       <div class="card-state">${p.state}</div>
       <div class="card-name">${p.name}</div>
@@ -445,6 +486,56 @@ function placeCardHTML(p) {
       </div>
     </div>
   </div>`;
+}
+
+async function handleImgError(imgEl, placeId) {
+  try {
+    const wrap = imgEl.parentElement;
+    // call server to fetch a replacement image
+    const res = await fetch(`/api/places/${placeId}/fetch-image`);
+    if (!res.ok) {
+      imgEl.style.display = 'none';
+      wrap.querySelector('.img-placeholder').style.display = 'flex';
+      return;
+    }
+    const data = await res.json();
+    const newUrl = data.img;
+    if (newUrl) {
+      const prox = proxiedUrl(newUrl);
+      wrap.setAttribute('data-bg', prox);
+      imgEl.src = prox;
+      applyCardBackgrounds();
+    } else {
+      imgEl.style.display = 'none';
+      wrap.querySelector('.img-placeholder').style.display = 'flex';
+    }
+  } catch (e) {
+    imgEl.style.display = 'none';
+    try { imgEl.parentElement.querySelector('.img-placeholder').style.display = 'flex'; } catch {}
+  }
+}
+
+// Preload images referenced by `.card-img-wrap[data-bg]` and set background only when loaded.
+function applyCardBackgrounds() {
+  document.querySelectorAll('.card-img-wrap[data-bg]').forEach(wrap => {
+    const url = wrap.getAttribute('data-bg');
+    if (!url) return;
+    // Avoid re-processing
+    if (wrap.dataset.bgApplied === '1') return;
+    const img = new Image();
+    img.onload = () => {
+      wrap.style.backgroundImage = `url('${url}')`;
+      wrap.dataset.bgApplied = '1';
+      // hide placeholder if present
+      const ph = wrap.querySelector('.img-placeholder'); if (ph) ph.style.display = 'none';
+    };
+    img.onerror = () => {
+      wrap.style.backgroundImage = '';
+      wrap.dataset.bgApplied = '0';
+      const ph = wrap.querySelector('.img-placeholder'); if (ph) ph.style.display = 'flex';
+    };
+    img.src = url;
+  });
 }
 
 /* ── PLACE DETAIL MODAL ──────────────────────────────── */
@@ -709,6 +800,7 @@ function renderWishlist(places) {
     return;
   }
   el.innerHTML = `<div class="places-grid">${places.map(p => placeCardHTML(p)).join('')}</div>`;
+  applyCardBackgrounds();
 }
 
 async function toggleWishlist(e, placeId) {
